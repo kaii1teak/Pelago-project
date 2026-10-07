@@ -116,6 +116,7 @@ export function WatchlistView() {
   } else if (count === 0) {
     body = (
       <EmptyState
+        as="h2"
         icon={Star}
         title="Nothing on your watchlist yet"
         description="Tap the star next to any asset and it shows up here with its live price. The list stays in this browser: no account, no sign-up."
@@ -131,6 +132,7 @@ export function WatchlistView() {
   } else if (query.isError && !query.data) {
     body = (
       <ErrorState
+        as="h2"
         title="Couldn't load your watchlist"
         error={query.error}
         retrying={query.isFetching}
@@ -188,15 +190,18 @@ export function WatchlistView() {
       />
 
       <div className="space-y-4">
-        <div className="border-t border-primary">{body}</div>
-        {hydrated && count > 0 && (
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-            <p role="status" className="num text-mono-md text-muted">
-              {query.data ? `${count} ${count === 1 ? "asset" : "assets"}` : " "}
-            </p>
-            <LiveBadge status={offline ? "offline" : "live"} />
-          </div>
-        )}
+        {/* A fixed minimum height: the skeleton, the rows and the empty state all
+            fit in it, so the footer doesn't jump while the list loads. */}
+        <div className="min-h-[20.5rem] border-t border-primary">{body}</div>
+        {/* Always rendered (even blank), so its row never pops in and pushes things. */}
+        <div className="flex min-h-5 flex-col justify-between gap-2 sm:flex-row sm:items-center">
+          <p role="status" className="num text-mono-md text-muted">
+            {sorted.length > 0
+              ? `${sorted.length} ${sorted.length === 1 ? "asset" : "assets"}`
+              : " "}
+          </p>
+          {hydrated && count > 0 && <LiveBadge status={offline ? "offline" : "live"} />}
+        </div>
       </div>
 
       <MissingAssets ids={missing} onRemove={remove} />

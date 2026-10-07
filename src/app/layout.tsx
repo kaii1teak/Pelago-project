@@ -51,6 +51,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // suppressHydrationWarning.
     <html
       lang="en"
+      // CSS makes in-page scrolling smooth; this tells Next to still jump to the top
+      // instantly on route changes (Next 16 stopped doing that on its own).
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${roboto.variable} ${robotoMono.variable}`}
     >

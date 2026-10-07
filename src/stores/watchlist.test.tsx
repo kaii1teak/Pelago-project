@@ -77,3 +77,13 @@ describe("watchlist store", () => {
     expect(Array.isArray(store.getState().ids)).toBe(true);
   });
 });
+
+describe("useWatchlistHydrated", () => {
+  it("reports false on the server and true once the saved list has been read", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const { useWatchlistHydrated } = await import("./watchlist");
+    const Probe = () => <span>{String(useWatchlistHydrated())}</span>;
+    // The server snapshot is always false, whatever the client store says.
+    expect(renderToString(<Probe />)).toContain("false");
+  });
+});

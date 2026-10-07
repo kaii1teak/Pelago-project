@@ -22,6 +22,7 @@ export function ErrorState({
   error,
   onRetry,
   retrying = false,
+  as: Heading = "h3",
   className,
 }: {
   title?: string;
@@ -29,6 +30,8 @@ export function ErrorState({
   /** Omit to hide the retry button (e.g. for not_found errors). */
   onRetry?: () => void;
   retrying?: boolean;
+  /** Match the page's outline: h2 right under the page's h1, h3 inside a section. */
+  as?: "h2" | "h3";
   className?: string;
 }) {
   return (
@@ -43,7 +46,7 @@ export function ErrorState({
         <TriangleAlert className="size-4" aria-hidden="true" />
       </div>
       <div className="max-w-sm space-y-1">
-        <h3 className="text-heading-xs text-primary">{title}</h3>
+        <Heading className="text-heading-xs text-primary">{title}</Heading>
         <p className="text-body-md text-secondary">{describe(error)}</p>
       </div>
       {onRetry && (

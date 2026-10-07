@@ -7,6 +7,7 @@ export function EmptyState({
   title,
   description,
   action,
+  as: Heading = "h3",
   className,
 }: {
   icon?: LucideIcon;
@@ -14,6 +15,8 @@ export function EmptyState({
   description?: string;
   /** Usually one <Button> or a button-styled <Link>. */
   action?: React.ReactNode;
+  /** Match the page's outline: h2 right under the page's h1, h3 inside a section. */
+  as?: "h2" | "h3";
   className?: string;
 }) {
   return (
@@ -27,7 +30,7 @@ export function EmptyState({
         <Icon className="size-4" aria-hidden="true" />
       </div>
       <div className="max-w-sm space-y-1">
-        <h3 className="text-heading-xs text-primary">{title}</h3>
+        <Heading className="text-heading-xs text-primary">{title}</Heading>
         {description && <p className="text-body-md text-secondary">{description}</p>}
       </div>
       {action}

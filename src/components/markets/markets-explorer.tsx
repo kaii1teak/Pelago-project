@@ -141,6 +141,7 @@ export function MarketsExplorer() {
   } else if (query.isError && !coins) {
     body = (
       <ErrorState
+        as="h2"
         title="Couldn't load markets"
         error={query.error}
         retrying={query.isFetching}
@@ -150,6 +151,7 @@ export function MarketsExplorer() {
   } else if (current.total === 0) {
     body = (
       <EmptyState
+        as="h2"
         icon={SearchX}
         title={q ? `No assets match “${q}”` : "No assets to show"}
         description={

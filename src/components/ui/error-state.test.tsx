@@ -46,4 +46,11 @@ describe("ErrorState", () => {
     render(<ErrorState onRetry={() => {}} retrying />);
     expect(screen.getByRole("button", { name: /try again/i })).toBeDisabled();
   });
+
+  it("titles itself with an h3 by default, or an h2 right under a page's h1", () => {
+    const { rerender } = render(<ErrorState title="Broke" />);
+    expect(screen.getByRole("heading", { level: 3, name: "Broke" })).toBeVisible();
+    rerender(<ErrorState as="h2" title="Broke" />);
+    expect(screen.getByRole("heading", { level: 2, name: "Broke" })).toBeVisible();
+  });
 });
