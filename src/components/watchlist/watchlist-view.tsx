@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LiveBadge } from "@/components/ui/live-badge";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { useRequestedIds } from "@/hooks/use-requested-ids";
 import { useMarketsByIds } from "@/lib/api/hooks";
 import { DEFAULT_DIR, sortCoins, type SortDir, type SortKey } from "@/lib/markets-table";
 import { matchWatchlist } from "@/lib/watchlist";
@@ -33,15 +34,9 @@ export function WatchlistView() {
   const clear = useWatchlistStore((s) => s.clear);
 
   /* ---- data ---------------------------------------------------------------
-     What we ask the API for only ever grows. Removing an asset changes the
-     saved list but not the request, so it is instant and costs no upstream call;
-     the row just stops matching. (An asset added from another tab does grow it.) */
-  const [requested, setRequested] = useState<readonly string[]>([]);
-  if (hydrated && !ids.every((id) => requested.includes(id))) {
-    // Adjusting state while rendering (instead of in an effect) avoids a frame of
-    // stale requests: React re-renders straight away with the new value.
-    setRequested([...new Set([...requested, ...ids])]);
-  }
+     What we ask the API for only ever grows (see useRequestedIds): removing an
+     asset is instant and costs no upstream call. */
+  const requested = useRequestedIds(ids, hydrated);
   const query = useMarketsByIds(requested);
 
   const { rows, missing } = useMemo(

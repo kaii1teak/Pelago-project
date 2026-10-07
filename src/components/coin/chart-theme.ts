@@ -1,3 +1,5 @@
+import { COMPARE_COLOR_TOKENS } from "@/lib/compare";
+
 /**
  * Lightweight Charts paints to a canvas, so it needs concrete color strings,
  * not CSS variables. These are resolved from the live design tokens (so they
@@ -48,4 +50,9 @@ export function readChartTheme(host: HTMLElement): ChartTheme {
     down: resolveColor(host, "--critical"),
     fontFamily,
   };
+}
+
+/** The comparison's series colors, one per slot, resolved from the live theme. */
+export function readSeriesColors(host: HTMLElement): string[] {
+  return COMPARE_COLOR_TOKENS.map((token) => resolveColor(host, token));
 }

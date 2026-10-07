@@ -1,5 +1,6 @@
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
+import { COMPARE_STORAGE_KEY, useCompareStore } from "@/stores/compare";
 import { WATCHLIST_STORAGE_KEY, useWatchlistStore } from "@/stores/watchlist";
 import { StoreHydrator } from "./store-hydrator";
 
@@ -68,5 +69,32 @@ describe("StoreHydrator", () => {
       window.dispatchEvent(new StorageEvent("storage", { key: WATCHLIST_STORAGE_KEY }));
     });
     expect(useWatchlistStore.getState().ids).toEqual([]);
+  });
+});
+
+describe("StoreHydrator: the comparison", () => {
+  const saveCompare = (ids: string[]) =>
+    localStorage.setItem(
+      COMPARE_STORAGE_KEY,
+      JSON.stringify({ state: { ids }, version: 1 }),
+    );
+
+  beforeEach(() => useCompareStore.setState({ ids: [] }));
+
+  it("reads the saved selection once mounted", async () => {
+    saveCompare(["bitcoin", "ethereum"]);
+    render(<StoreHydrator />);
+    await act(async () => {});
+    expect(useCompareStore.getState().ids).toEqual(["bitcoin", "ethereum"]);
+  });
+
+  it("follows another tab changing the selection", async () => {
+    render(<StoreHydrator />);
+    await act(async () => {});
+    saveCompare(["solana"]);
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent("storage", { key: COMPARE_STORAGE_KEY }));
+    });
+    expect(useCompareStore.getState().ids).toEqual(["solana"]);
   });
 });

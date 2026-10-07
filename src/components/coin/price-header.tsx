@@ -3,6 +3,7 @@ import { CoinLogo } from "@/components/ui/coin-logo";
 import { Badge } from "@/components/ui/badge";
 import { PercentChange } from "@/components/ui/percent-change";
 import { Price } from "@/components/ui/price";
+import { CompareLink } from "@/components/compare/compare-link";
 import { WatchButton } from "@/components/watchlist/watch-button";
 import type { CoinDetail } from "@/lib/api/schemas";
 
@@ -37,7 +38,10 @@ export function PriceHeader({ coin }: { coin: CoinDetail }) {
             </div>
           </div>
         </div>
-        <WatchButton id={coin.id} name={coin.name} className="border border-outline" />
+        <div className="flex items-center gap-2">
+          <CompareLink id={coin.id} name={coin.name} />
+          <WatchButton id={coin.id} name={coin.name} className="border border-outline" />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">

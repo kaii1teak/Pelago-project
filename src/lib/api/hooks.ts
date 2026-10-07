@@ -111,16 +111,48 @@ const CHART_REFETCH_MS: Record<ChartRange, number | false> = {
   "1y": false,
 };
 
+/** The one definition of "a coin's price chart", shared by the single and multi-coin hooks. */
+const coinChartQuery = (id: string, range: ChartRange) => ({
+  queryKey: queryKeys.coinChart(id, range),
+  queryFn: ({ signal }: { signal: AbortSignal }) =>
+    apiGet<PriceChart>(`/api/coins/${encodeURIComponent(id)}/chart?range=${range}`, {
+      signal,
+    }),
+  refetchInterval: CHART_REFETCH_MS[range],
+});
+
 export function useCoinChart(id: string, range: ChartRange) {
   return useQuery<PriceChart, ApiError>({
-    queryKey: queryKeys.coinChart(id, range),
-    queryFn: ({ signal }) =>
-      apiGet<PriceChart>(`/api/coins/${encodeURIComponent(id)}/chart?range=${range}`, {
-        signal,
-      }),
-    refetchInterval: CHART_REFETCH_MS[range],
+    ...coinChartQuery(id, range),
     // Switching ranges keeps the old chart (dimmed) instead of flashing a skeleton.
     placeholderData: keepPreviousData,
+  });
+}
+
+type ChartResult = UseQueryResult<PriceChart, Error>;
+
+// Module-level so its identity is stable (see combineMarkets).
+function combineCharts(results: ChartResult[]) {
+  return results.map((r) => ({
+    data: r.data,
+    isPending: r.isPending,
+    isError: r.isError,
+    error: r.error,
+    isFetching: r.isFetching,
+    refetch: () => void r.refetch(),
+  }));
+}
+
+/**
+ * Price charts for several coins at once (the comparison), in the order given.
+ * No placeholder data on purpose: results are matched to coins by position, so
+ * "keep the previous result" could show one coin's line under another's name
+ * when the list changes.
+ */
+export function useCoinCharts(ids: readonly string[], range: ChartRange) {
+  return useQueries({
+    queries: ids.map((id) => coinChartQuery(id, range)),
+    combine: combineCharts,
   });
 }
 

@@ -52,7 +52,9 @@ export function useChartUrlState() {
       if (range !== DEFAULT_RANGE) params.set("range", range);
       if (mode !== DEFAULT_MODE) params.set("mode", mode);
 
-      const search = params.toString();
+      // Commas are legal in a query string and much more readable than %2C
+      // (other pages put lists there, e.g. ?assets=bitcoin,ethereum).
+      const search = params.toString().replaceAll("%2C", ",");
       const url = search ? `${pathname}?${search}` : pathname;
       if (url === `${window.location.pathname}${window.location.search}`) return;
       window.history.replaceState(null, "", url);

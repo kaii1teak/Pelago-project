@@ -26,7 +26,8 @@ export function MarketsTable({
   return (
     <div
       className={cn(
-        "overflow-x-auto transition-opacity duration-250 ease-standard",
+        // relative: keeps the cells' screen-reader-only text inside this scroller.
+        "relative overflow-x-auto transition-opacity duration-250 ease-standard",
         busy && "opacity-60",
       )}
       aria-busy={busy}
