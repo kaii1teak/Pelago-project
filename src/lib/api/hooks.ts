@@ -1,9 +1,14 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQueries,
+  useQuery,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { apiGet } from "./client";
 import type { ApiError } from "./errors";
-import { marketsUrl, type MarketsParams } from "./markets-query";
+import { chunkIds, marketsUrl, type MarketsParams } from "./markets-query";
 import { queryKeys } from "./query-keys";
 import type { ChartRange } from "@/lib/chart";
 import type {
@@ -38,6 +43,45 @@ export function useMarkets(
     queryFn: ({ signal }) => apiGet<MarketCoin[]>(marketsUrl(params), { signal }),
     refetchInterval: LIVE_REFETCH_MS,
     placeholderData: options?.keepPrevious ? keepPreviousData : undefined,
+  });
+}
+
+// useQueries types errors as plain Error; ApiError is what apiGet actually throws.
+type MarketsResult = UseQueryResult<MarketCoin[], Error>;
+
+// Module-level so its identity is stable: TanStack Query then re-runs it only when
+// a result actually changes, not on every render.
+function combineMarkets(results: MarketsResult[]) {
+  return {
+    /** Every chunk's coins, or undefined until ALL chunks have data. */
+    data: results.every((r) => r.data)
+      ? results.flatMap((r) => r.data as MarketCoin[])
+      : undefined,
+    isPending: results.some((r) => r.isPending),
+    isError: results.some((r) => r.isError),
+    error: results.find((r) => r.error)?.error ?? null,
+    isFetching: results.some((r) => r.isFetching),
+    refetch: () => {
+      for (const r of results) void r.refetch();
+    },
+  };
+}
+
+/**
+ * Live prices for a specific set of coins (the watchlist). The API takes at most
+ * MAX_IDS per request and a list can be longer, so this splits it into as many
+ * requests as needed and joins them. No ids, no requests.
+ */
+export function useMarketsByIds(ids: readonly string[]) {
+  return useQueries({
+    queries: chunkIds(ids).map((part) => ({
+      queryKey: queryKeys.markets({ ids: part }),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        apiGet<MarketCoin[]>(marketsUrl({ ids: part }), { signal }),
+      refetchInterval: LIVE_REFETCH_MS,
+      placeholderData: keepPreviousData,
+    })),
+    combine: combineMarkets,
   });
 }
 

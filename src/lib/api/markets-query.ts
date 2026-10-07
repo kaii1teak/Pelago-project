@@ -31,6 +31,17 @@ export function normalizeMarketsParams(params: MarketsParams = {}): MarketsParam
   };
 }
 
+/**
+ * Splits ids into requests the API accepts (at most MAX_IDS each). De-duplicated
+ * and sorted first, so the same set of coins always yields the same requests.
+ */
+export function chunkIds(ids: readonly string[], size = MAX_IDS): string[][] {
+  const unique = [...new Set(ids)].sort();
+  const chunks: string[][] = [];
+  for (let i = 0; i < unique.length; i += size) chunks.push(unique.slice(i, i + size));
+  return chunks;
+}
+
 export function marketsUrl(params: MarketsParams = {}) {
   const p = normalizeMarketsParams(params);
   const search = new URLSearchParams();

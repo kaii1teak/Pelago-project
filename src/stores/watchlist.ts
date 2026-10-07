@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -56,3 +57,16 @@ export const useWatchlistStore = create<WatchlistState>()(
 
 /** Whether a coin is watched. Returns a boolean, so a row only re-renders when *its* state flips. */
 export const useIsWatched = (id: string) => useWatchlistStore((s) => s.ids.includes(id));
+
+/**
+ * True once the persisted list has been read from localStorage. Until then `ids`
+ * is the server's empty list, so a page that *shows* the list must wait for this
+ * (or it flashes "nothing saved" for a frame). The server always reports false.
+ */
+export function useWatchlistHydrated() {
+  return useSyncExternalStore(
+    (onChange) => useWatchlistStore.persist.onFinishHydration(onChange),
+    () => useWatchlistStore.persist.hasHydrated(),
+    () => false,
+  );
+}

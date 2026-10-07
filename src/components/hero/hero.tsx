@@ -15,14 +15,7 @@ import { HERO_FAN } from "@/lib/line-fan";
  */
 export function Hero() {
   return (
-    <section className="relative isolate">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-      >
-        <LineFan fan={HERO_FAN} className="size-full" />
-      </div>
-
+    <section className="relative isolate overflow-clip">
       <div className="page-container flex min-h-hero flex-col">
         <div className="flex flex-1 flex-col items-center pt-hero pb-16 text-center">
           <SectionLabel>Live crypto markets</SectionLabel>
@@ -47,6 +40,15 @@ export function Hero() {
             >
               Compare assets
             </Link>
+          </div>
+
+          {/* The lines' meeting point sits in this zone, so it stays the same distance
+              below the buttons on every screen. The fan is viewport-wide and taller than the hero, which crops it
+              (so nothing slips under the navbar). */}
+          <div aria-hidden="true" className="relative mt-6 h-24 w-full md:h-32">
+            <div className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-300 w-screen -translate-x-1/2 -translate-y-[60rem]">
+              <LineFan fan={HERO_FAN} className="size-full" />
+            </div>
           </div>
         </div>
 

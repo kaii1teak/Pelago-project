@@ -7,11 +7,12 @@ import { SectionLabel } from "@/components/ui/section-label";
 
 export function Footer() {
   return (
-    <footer className="mt-section">
-      {/* The hero's line motif, cut at the horizon: the footer's top edge. */}
+    <footer className="mt-12 md:mt-0">
+      {/* The hero's line motif, cut at the horizon: the footer's top edge. The mask only
+          fades opacity, so the line ends dissolve instead of stopping dead. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none h-40 overflow-hidden md:h-56"
+        className="pointer-events-none h-40 overflow-hidden [mask-image:radial-gradient(ellipse_75%_90%_at_50%_100%,black_35%,transparent_100%)] md:h-56"
       >
         <LineFan fan={FOOTER_FAN} className="size-full" />
       </div>

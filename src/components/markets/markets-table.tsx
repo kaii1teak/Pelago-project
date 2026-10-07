@@ -10,6 +10,7 @@ export function MarketsTable({
   dir,
   onSort,
   busy = false,
+  caption = "Cryptocurrencies by market cap. Column headers are buttons that sort the table.",
 }: {
   rows: readonly MarketCoin[];
   sort: SortKey;
@@ -17,6 +18,8 @@ export function MarketsTable({
   onSort: (key: SortKey) => void;
   /** Showing the previous results while a new filter loads. */
   busy?: boolean;
+  /** Screen-reader description of the table. */
+  caption?: string;
 }) {
   const header = { activeKey: sort, dir, onSort } as const;
 
@@ -29,9 +32,7 @@ export function MarketsTable({
       aria-busy={busy}
     >
       <table className="w-full min-w-[20rem] border-collapse">
-        <caption className="sr-only">
-          Cryptocurrencies by market cap. Column headers are buttons that sort the table.
-        </caption>
+        <caption className="sr-only">{caption}</caption>
         <thead className="border-b border-strong">
           <tr>
             <th scope="col" className="w-12 py-3 pl-2">

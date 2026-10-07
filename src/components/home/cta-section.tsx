@@ -8,7 +8,7 @@ export function CtaSection() {
   return (
     <Reveal>
       <section aria-labelledby="cta-heading" className="border-t border-primary">
-        <div className="page-container flex flex-col gap-10 pt-24 md:flex-row md:items-end md:justify-between">
+        <div className="page-container flex flex-col gap-10 pt-12 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl space-y-4">
             <SectionLabel>Get started</SectionLabel>
             <h2 id="cta-heading" className="text-heading-xl text-primary">

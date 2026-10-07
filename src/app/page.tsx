@@ -51,10 +51,12 @@ export default async function HomePage() {
           <MoversSection />
         </Reveal>
       </div>
-      <div className="mt-section">
+      {/* No gap around the features on desktop: its vertical rule runs the full height
+          of the pinned panel and should meet the sections above and below. */}
+      <div className="mt-section lg:mt-0">
         <FeaturesSection />
       </div>
-      <div className="mt-section">
+      <div className="mt-section lg:mt-0">
         <CtaSection />
       </div>
     </HydrationBoundary>

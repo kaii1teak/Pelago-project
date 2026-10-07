@@ -3,11 +3,17 @@ import { PAGE_SIZE } from "@/lib/markets-table";
 import { ROW_HEIGHT } from "./coin-row";
 
 /** Same row height and column visibility as the real table, so data arriving doesn't move anything. */
-export function MarketsSkeleton() {
+export function MarketsSkeleton({
+  rows = PAGE_SIZE,
+  label = "Loading markets",
+}: {
+  rows?: number;
+  label?: string;
+}) {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading markets">
+    <div role="status" aria-busy="true" aria-label={label}>
       <div className="h-[2.875rem] border-b border-strong" />
-      {Array.from({ length: PAGE_SIZE }, (_, i) => (
+      {Array.from({ length: rows }, (_, i) => (
         <div
           key={i}
           className={`${ROW_HEIGHT} flex items-center gap-4 border-b border-primary px-4 last:border-b-0`}

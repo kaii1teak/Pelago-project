@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { FOOTER_FAN, HERO_FAN, buildLineFan } from "@/lib/line-fan";
+import { HERO_FAN, buildLineFan } from "@/lib/line-fan";
 import { LineFan } from "./line-fan";
 
 describe("LineFan", () => {
@@ -16,8 +16,8 @@ describe("LineFan", () => {
 
   it("draws one path per line, and nothing animated", () => {
     const { container } = render(<LineFan fan={HERO_FAN} />);
-    const { sides, rays } = buildLineFan(HERO_FAN);
-    expect(container.querySelectorAll("path")).toHaveLength(sides.length + rays.length);
+    const { sides, rising } = buildLineFan(HERO_FAN);
+    expect(container.querySelectorAll("path")).toHaveLength(sides.length + rising.length);
     expect(
       container.querySelector("animate, animateTransform, animateMotion, set"),
     ).toBeNull();
@@ -37,26 +37,19 @@ describe("LineFan", () => {
     expect(svg).toHaveClass("line-fan", "size-full");
   });
 
-  it("gives each fan on the page its own gradient, so two never share an id", () => {
-    const { container } = render(
-      <>
-        <LineFan fan={HERO_FAN} />
-        <LineFan fan={FOOTER_FAN} />
-      </>,
-    );
-    const ids = [...container.querySelectorAll("linearGradient")].map((g) => g.id);
-    expect(ids).toHaveLength(2);
-    expect(new Set(ids).size).toBe(2);
-    // ...and every ray points at a gradient that exists.
-    for (const path of container.querySelectorAll("path[stroke^='url(']")) {
-      const id = path.getAttribute("stroke")!.slice(5, -1);
-      expect(ids).toContain(id);
-    }
+  it("draws every line in one ink and weight", () => {
+    const { container } = render(<LineFan fan={HERO_FAN} />);
+    // One stroke color and width for the whole svg: no per-path overrides, gradients or filters.
+    expect(container.querySelector("defs, linearGradient, filter")).toBeNull();
+    expect(container.querySelector("path[stroke], path[stroke-width]")).toBeNull();
+    // ...and nothing is dimmed or tinted on a particular screen size.
+    expect(container.querySelector("g")).toBeNull();
+    expect(container.innerHTML).not.toMatch(/opacity-\d+/);
   });
 
-  it("omits the gradient when there are no rays", () => {
-    const { container } = render(<LineFan fan={{ ...HERO_FAN, rayLines: 0 }} />);
-    expect(container.querySelector("linearGradient")).toBeNull();
+  it("works without rising lines too", () => {
+    const { container } = render(<LineFan fan={{ ...HERO_FAN, riseSpan: 0 }} />);
+    expect(container.querySelectorAll("path")).toHaveLength(HERO_FAN.sideLines * 2);
   });
 
   it("globals.css keeps the strokes hairline whatever the box is stretched to", () => {
