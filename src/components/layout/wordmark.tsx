@@ -1,21 +1,20 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The Pelago mark: an archipelago, one large island and two smaller ones
- * drifting off it. Solid circles in the current text color, so it follows the
- * theme without any color of its own.
+ * The Pelago mark: a solid square cut by one rising diagonal, a price line seen as
+ * a gap. Flat, two shapes, in the current text color, so it follows the theme
+ * without any color of its own. Keep it in step with `src/app/icon.svg`.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 32 32"
+      viewBox="0 0 24 24"
       fill="currentColor"
       aria-hidden="true"
       className={cn("shrink-0", className)}
     >
-      <circle cx="13" cy="18" r="10" />
-      <circle cx="25.5" cy="9" r="4.5" />
-      <circle cx="26" cy="24.5" r="2.5" />
+      <path d="M2 2H22L2 22Z" />
+      <path d="M22 7V22H7Z" />
     </svg>
   );
 }

@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  COMPARE_COLOR_TOKENS,
+  COMPARE_PALETTE,
   MAX_COMPARE,
   alignPercentSeries,
+  assignColors,
+  isCompareView,
   findLateStarter,
   parseCompareIds,
   toPercentSeries,
   totalReturn,
+  withColor,
 } from "./compare";
 
 const pts = (...pairs: [number, number][]) =>
@@ -83,8 +88,12 @@ describe("alignPercentSeries", () => {
   });
 
   it("handles no data at all", () => {
-    expect(alignPercentSeries([[], []])).toEqual({ start: null, series: [[], []] });
-    expect(alignPercentSeries([])).toEqual({ start: null, series: [] });
+    expect(alignPercentSeries([[], []])).toEqual({
+      start: null,
+      series: [[], []],
+      raw: [[], []],
+    });
+    expect(alignPercentSeries([])).toEqual({ start: null, series: [], raw: [] });
   });
 
   it("does not mutate its inputs", () => {
@@ -119,5 +128,89 @@ describe("totalReturn", () => {
   it("is null when there are fewer than two points", () => {
     expect(totalReturn([])).toBeNull();
     expect(totalReturn(pts([1, 0]))).toBeNull();
+  });
+});
+
+describe("assignColors", () => {
+  it("gives new assets four clearly different hues first, in order", () => {
+    const colors = assignColors(["a", "b", "c", "d"]);
+    expect(Object.values(colors)).toEqual([0, 7, 3, 4]);
+  });
+
+  it("never gives two assets the same color", () => {
+    const ids = ["a", "b", "c", "d"];
+    const colors = assignColors(ids, { a: 3, b: 3, c: 3, d: 3 });
+    expect(new Set(Object.values(colors)).size).toBe(4);
+  });
+
+  it("keeps the colors that were already chosen, whatever the order", () => {
+    expect(assignColors(["a", "b", "c"], { b: 9, a: 5 })).toMatchObject({ a: 5, b: 9 });
+  });
+
+  it("gives a new asset the first default nobody has", () => {
+    // a holds violet(0); b chose cyan(7): the new one skips both and takes orange(3).
+    expect(assignColors(["a", "b", "c"], { a: 0, b: 7 }).c).toBe(3);
+  });
+
+  it("ignores colors that don't exist, and ids that aren't in the list", () => {
+    const colors = assignColors(["a"], { a: 99, z: 2 });
+    expect(colors).toEqual({ a: 0 });
+    expect(assignColors(["a"], { a: -1 })).toEqual({ a: 0 });
+    expect(assignColors(["a"], { a: 1.5 })).toEqual({ a: 0 });
+  });
+
+  it("returns nothing for no assets", () => {
+    expect(assignColors([])).toEqual({});
+  });
+});
+
+describe("withColor", () => {
+  it("sets an asset's color", () => {
+    expect(withColor({ a: 0, b: 7 }, "a", 5)).toEqual({ a: 5, b: 7 });
+  });
+
+  it("swaps with whoever has the color, so no two lines share one", () => {
+    expect(withColor({ a: 0, b: 7 }, "a", 7)).toEqual({ a: 7, b: 0 });
+  });
+
+  it("changes nothing for a color that doesn't exist or an asset that isn't in the list", () => {
+    expect(withColor({ a: 0 }, "a", 42)).toEqual({ a: 0 });
+    expect(withColor({ a: 0 }, "zzz", 3)).toEqual({ a: 0 });
+  });
+
+  it("does not mutate its input", () => {
+    const colors = Object.freeze({ a: 0, b: 7 });
+    expect(() => withColor(colors, "a", 7)).not.toThrow();
+  });
+
+  it("is a no-op when the asset already has that color", () => {
+    expect(withColor({ a: 0, b: 7 }, "a", 0)).toEqual({ a: 0, b: 7 });
+  });
+});
+
+describe("COMPARE_PALETTE", () => {
+  it("has ten named colors, each backed by a design token", () => {
+    expect(COMPARE_PALETTE).toHaveLength(10);
+    expect(new Set(COMPARE_PALETTE.map((c) => c.name)).size).toBe(10);
+    expect(COMPARE_COLOR_TOKENS.every((t) => /^--chart-\d+-line$/.test(t))).toBe(true);
+  });
+});
+
+describe("alignPercentSeries: raw prices", () => {
+  it("returns the same shared stretch as prices, for showing dollars instead of percent", () => {
+    const early = pts([100, 10], [200, 12], [300, 15]);
+    const late = pts([200, 40], [300, 44]);
+    const { raw } = alignPercentSeries([early, late]);
+    expect(raw[0]).toEqual(pts([200, 12], [300, 15]));
+    expect(raw[1]).toEqual(late);
+  });
+});
+
+describe("isCompareView", () => {
+  it("knows its two views", () => {
+    expect(isCompareView("change")).toBe(true);
+    expect(isCompareView("price")).toBe(true);
+    expect(isCompareView("percent")).toBe(false);
+    expect(isCompareView(null)).toBe(false);
   });
 });

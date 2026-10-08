@@ -7,7 +7,7 @@ const saved = () => JSON.parse(localStorage.getItem(COMPARE_STORAGE_KEY)!).state
 
 beforeEach(() => {
   localStorage.clear();
-  store.setState({ ids: [] });
+  store.setState({ ids: [], colors: {} });
 });
 
 describe("compare store", () => {
@@ -88,5 +88,101 @@ describe("compare store", () => {
     localStorage.setItem(COMPARE_STORAGE_KEY, "{nope");
     await expect(store.persist.rehydrate()).resolves.not.toThrow();
     expect(store.getState().ids).toEqual([]);
+  });
+});
+
+describe("compare store: colors", () => {
+  it("gives every asset a color the moment it is added, never the same one twice", () => {
+    for (const id of ["a", "b", "c", "d"]) store.getState().add(id);
+    const colors = Object.values(store.getState().colors);
+    expect(colors).toHaveLength(4);
+    expect(new Set(colors).size).toBe(4);
+  });
+
+  it("keeps an asset's color while others are added and removed", () => {
+    store.getState().add("a");
+    store.getState().add("b");
+    store.getState().add("c");
+    const b = store.getState().colors.b;
+    store.getState().remove("a");
+    store.getState().add("d");
+    expect(store.getState().colors.b).toBe(b);
+  });
+
+  it("forgets the color of a removed asset, so a new one can take it", () => {
+    store.getState().add("a");
+    const first = store.getState().colors.a;
+    store.getState().remove("a");
+    expect(store.getState().colors).toEqual({});
+    store.getState().add("z");
+    expect(store.getState().colors.z).toBe(first);
+  });
+
+  it("lets the user pick a color, and swaps with whoever had it", () => {
+    store.getState().add("a");
+    store.getState().add("b");
+    const { a, b } = store.getState().colors;
+    store.getState().setColor("a", b!);
+    expect(store.getState().colors).toEqual({ a: b, b: a });
+  });
+
+  it("keeps the colors of assets that stay when a link replaces the list", () => {
+    store.getState().add("a");
+    store.getState().add("b");
+    store.getState().setColor("b", 9);
+    store.getState().set(["b", "x"]);
+    expect(store.getState().colors.b).toBe(9);
+    expect(Object.keys(store.getState().colors).sort()).toEqual(["b", "x"]);
+  });
+
+  it("persists the colors with the list", () => {
+    store.getState().add("a");
+    store.getState().setColor("a", 6);
+    expect(JSON.parse(localStorage.getItem(COMPARE_STORAGE_KEY)!).state.colors).toEqual({
+      a: 6,
+    });
+  });
+
+  it("restores the saved colors", async () => {
+    localStorage.setItem(
+      COMPARE_STORAGE_KEY,
+      JSON.stringify({ state: { ids: ["a", "b"], colors: { a: 5, b: 2 } }, version: 1 }),
+    );
+    await store.persist.rehydrate();
+    expect(store.getState().colors).toEqual({ a: 5, b: 2 });
+  });
+
+  it("gives colors to an older save that has none, and repairs bad ones", async () => {
+    localStorage.setItem(
+      COMPARE_STORAGE_KEY,
+      JSON.stringify({ state: { ids: ["a", "b"] }, version: 1 }),
+    );
+    await store.persist.rehydrate();
+    expect(Object.values(store.getState().colors)).toHaveLength(2);
+
+    localStorage.setItem(
+      COMPARE_STORAGE_KEY,
+      JSON.stringify({
+        state: { ids: ["a", "b"], colors: { a: 99, b: "red" } },
+        version: 1,
+      }),
+    );
+    await store.persist.rehydrate();
+    const colors = Object.values(store.getState().colors);
+    expect(colors.every((c) => Number.isInteger(c) && c >= 0 && c < 10)).toBe(true);
+    expect(new Set(colors).size).toBe(2);
+
+    localStorage.setItem(
+      COMPARE_STORAGE_KEY,
+      JSON.stringify({ state: { ids: ["a"], colors: "nope" }, version: 1 }),
+    );
+    await store.persist.rehydrate();
+    expect(Object.keys(store.getState().colors)).toEqual(["a"]);
+  });
+
+  it("clears the colors with the list", () => {
+    store.getState().add("a");
+    store.getState().clear();
+    expect(store.getState().colors).toEqual({});
   });
 });

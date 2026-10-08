@@ -1,10 +1,11 @@
 import { formatChartTime } from "@/components/coin/chart-format";
 import type { ChartRange } from "@/lib/chart";
-import { formatPercent } from "@/lib/format";
-import { Swatch } from "./asset-chips";
+import type { CompareView } from "@/lib/compare";
+import { formatPercent, formatUsd } from "@/lib/format";
+import { Swatch } from "./color-picker";
 import type { CompareCrosshair } from "./compare-canvas";
 
-export type LegendEntry = { id: string; slot: number; symbol: string };
+export type LegendEntry = { id: string; color: number; symbol: string };
 
 /**
  * A flat readout pinned to the chart's corner while the pointer is on it: the
@@ -15,10 +16,12 @@ export function CompareLegend({
   info,
   entries,
   range,
+  view = "change",
 }: {
   info: CompareCrosshair | null;
   entries: readonly LegendEntry[];
   range: ChartRange;
+  view?: CompareView;
 }) {
   if (!info) return null;
   const rows = entries.filter((e) => info.values[e.id] !== undefined);
@@ -31,10 +34,12 @@ export function CompareLegend({
       <span className="text-muted">{formatChartTime(range, info.time)}</span>
       {rows.map((entry) => (
         <span key={entry.id} className="flex items-center gap-2">
-          <Swatch slot={entry.slot} className="h-3 w-1 shrink-0" />
+          <Swatch color={entry.color} className="h-3 w-1 shrink-0" />
           <span className="text-muted">{entry.symbol}</span>
           <span className="ml-auto text-primary">
-            {formatPercent(info.values[entry.id])}
+            {view === "price"
+              ? formatUsd(info.values[entry.id])
+              : formatPercent(info.values[entry.id])}
           </span>
         </span>
       ))}

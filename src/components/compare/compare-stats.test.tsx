@@ -5,7 +5,7 @@ import { CompareStats, type StatsAsset } from "./compare-stats";
 
 const btc: StatsAsset = {
   id: "bitcoin",
-  slot: 0,
+  color: 0,
   name: "Bitcoin",
   image: null,
   coin: makeCoin({
@@ -28,7 +28,7 @@ const btc: StatsAsset = {
 const eth: StatsAsset = {
   ...btc,
   id: "ethereum",
-  slot: 1,
+  color: 7,
   name: "Ethereum",
   coin: makeCoin({
     id: "ethereum",

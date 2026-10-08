@@ -61,8 +61,8 @@
   --btn-outline-pressed: rgb(0 0 0 / 0.32);
 
   /* Accent: use sparingly. Semantic colors. */
-  --accent: #7b4fd1;
-  --accent-hover: #986def;
+  --accent: #b8860b;
+  --accent-hover: #facc15;
   --accent-pressed: #6c41c2;
   --info: #265acb;
   --success: #2e7215; /* spec #337c18 is 4.3:1 on its own 12% tint; this is 4.9 */
@@ -96,6 +96,18 @@
   --chart-8-line: #459ba7;
   --chart-9-line: #7093ba;
   --chart-10-line: #7c9573;
+
+  /* Candles: a light body and a dark body, never pure white or pure black. A light
+     candle needs an outline to read on the light page, so each has a line color
+     (also used for its wick). */
+  --candle-up: #d0d0d0;
+  --candle-up-line: #7a7a7a;
+  --candle-down: #4a4a4a;
+  --candle-down-line: #4a4a4a;
+
+  /* Frosted panel: the share of its own color that is opaque. Lower = more see-through.
+     Light needs more: a see-through panel over the dimmed page turns muddy gray. */
+  --glass-opacity: 90%;
 
   --shadow-dropdown-color: rgb(0 0 0 / 0.08);
 }
@@ -138,7 +150,7 @@
   --btn-outline-pressed: rgb(255 255 255 / 0.32);
 
   /* The light values fail AA on near-black (accent 3.7, success 3.8, critical 2.7). */
-  --accent: #986def;
+  --accent: #facc15;
   --accent-hover: #a47df5;
   --accent-pressed: #8559e0;
   --info: #6f9bf0;
@@ -158,6 +170,15 @@
   --chart-9-line: var(--chart-9);
   --chart-10-line: var(--chart-10);
 
+  /* Same idea on the dark page: the dark candle gets a lighter outline so it
+     doesn't vanish into the background. */
+  --candle-up: #cfcfcf;
+  --candle-up-line: #cfcfcf;
+  --candle-down: #4a4a4a;
+  --candle-down-line: #8c8c8c;
+
+  --glass-opacity: 80%;
+
   --shadow-dropdown-color: rgb(0 0 0 / 0.5);
 }
 
@@ -169,6 +190,13 @@
   --header-h: 4rem;
   /* Big vertical gaps between sections: 120 / 160 / 200. */
   --section-gap: 7.5rem;
+
+  /* Frosted surface (the command palette): how blurred whatever is behind it looks.
+     How see-through it is (--glass-opacity) is set per theme, in the two theme blocks. */
+  --glass-blur: 16px;
+  /* Hairlines that fade out at both ends (the market stats strip): how much of each
+     end fades. 0% = a plain line, 50% = it only shows in the middle. */
+  --line-fade-size: 18%;
 
   /* Heading scale (mobile first): size / line-height / letter-spacing.
      3xl and 2xl follow the spec's mobile sizes (40, 36); xl and lg step down
@@ -213,7 +241,7 @@
 @media (min-width: 64rem) {
   :root {
     --gutter: 1.5rem;
-    --section-gap: 12.5rem;
+    --section-gap: 7rem;
   }
 }
 
@@ -418,6 +446,91 @@
 }
 @utility border-control {
   border-color: var(--border-control);
+}
+
+/* ---- Surface and line effects --------------------------------------------- */
+/* Frosted glass: the page color at --glass-opacity over a blurred copy of what is
+   behind it. It builds on --bg-primary, so one rule serves both themes. (A Tailwind
+   `/80` modifier can't do this: bg-primary is a plain @utility, not a theme color.) */
+@utility surface-glass {
+  background-color: color-mix(
+    in srgb,
+    var(--bg-primary) var(--glass-opacity),
+    transparent
+  );
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* A 1px hairline along the top (or bottom) edge that fades to nothing at both ends. */
+@utility line-fade-top {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    inset-inline: 0;
+    height: 1px;
+    pointer-events: none;
+    background: var(--border-primary);
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--line-fade-size),
+      #000 calc(100% - var(--line-fade-size)),
+      transparent
+    );
+  }
+}
+@utility line-fade-bottom {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    inset-inline: 0;
+    height: 1px;
+    pointer-events: none;
+    background: var(--border-primary);
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--line-fade-size),
+      #000 calc(100% - var(--line-fade-size)),
+      transparent
+    );
+  }
+}
+
+/* A hairline along the top (or bottom) edge of the element, drawn as a pseudo-element so
+   it can be stretched. `left` / `right` are how far it runs past the element: 0 = exactly
+   its width (stays inside the page padding); -100vw = out to the edge of the screen (the
+   section must then clip sideways, `overflow-x: clip`, or the page grows wider). */
+@utility line-bleed-top {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    background: var(--border-primary);
+  }
+}
+@utility line-bleed-bottom {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    background: var(--border-primary);
+  }
 }
 
 /* ---- Layout utilities ---------------------------------------------------- */

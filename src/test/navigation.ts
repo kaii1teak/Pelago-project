@@ -46,7 +46,19 @@ export function navigateExternally(url: string) {
   window.history.pushState(null, "", url);
 }
 
+/** Hrefs passed to router.push/replace since the last reset, for asserting where a click went. */
+export const routerCalls: string[] = [];
+export const resetRouterCalls = () => void (routerCalls.length = 0);
+
 export const navigationMock = {
+  useRouter: () => ({
+    push: (href: string) => void routerCalls.push(href),
+    replace: (href: string) => void routerCalls.push(href),
+    prefetch: () => {},
+    back: () => {},
+    forward: () => {},
+    refresh: () => {},
+  }),
   useSearchParams: () => {
     const search = useSyncExternalStore(
       subscribe,

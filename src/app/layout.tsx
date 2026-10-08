@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
+import { CommandPalette } from "@/components/command/command-palette";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <QueryProvider>
             <TooltipProvider>
               <StoreHydrator />
+              <CommandPalette />
               <Header />
               <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
                 {children}

@@ -6,11 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { MarketCoin } from "@/lib/api/schemas";
 import { RANGE_NAME, type ChartRange } from "@/lib/chart";
 import { formatCompactNumber } from "@/lib/format";
-import { Swatch } from "./asset-chips";
+import { Swatch } from "./color-picker";
 
 export type StatsAsset = {
   id: string;
-  slot: number;
+  color: number;
   name: string;
   image: string | null;
   /** Undefined until the market data arrives (or if the API has no such coin). */
@@ -124,7 +124,7 @@ export function CompareStats({
                   href={`/coin/${asset.id}`}
                   className="flex min-w-0 items-center gap-2 rounded-control py-1 transition-colors duration-150 ease-standard hover:text-secondary"
                 >
-                  <Swatch slot={asset.slot} className="h-5 w-1 shrink-0" />
+                  <Swatch color={asset.color} className="h-5 w-1 shrink-0" />
                   <CoinLogo src={asset.image} name={asset.name} size={24} />
                   <span className="truncate text-body-md text-primary">{asset.name}</span>
                 </Link>

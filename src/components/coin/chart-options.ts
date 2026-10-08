@@ -46,6 +46,8 @@ function formatTick(time: Time, type: TickMarkType) {
 export function chartOptions(
   theme: ChartTheme,
   range: ChartRange,
+  /** Stop scrolling at the first bar. Off while there is older history still to load. */
+  fixLeftEdge = true,
 ): DeepPartial<ChartOptions> {
   return {
     autoSize: true,
@@ -83,7 +85,7 @@ export function chartOptions(
       timeVisible: range !== "1y",
       secondsVisible: false,
       rightOffset: 2,
-      fixLeftEdge: true,
+      fixLeftEdge,
       fixRightEdge: true,
       tickMarkFormatter: (time: Time, type: TickMarkType) => formatTick(time, type),
     },

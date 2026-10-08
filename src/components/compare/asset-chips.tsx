@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { PercentChange } from "@/components/ui/percent-change";
 import { Skeleton } from "@/components/ui/skeleton";
-import { COMPARE_COLOR_TOKENS } from "@/lib/compare";
+import { ColorPicker } from "./color-picker";
 
 export type AssetChipData = {
   id: string;
-  /** Position in the comparison: sets the color. */
-  slot: number;
+  /** Its line color: an index into COMPARE_PALETTE. */
+  color: number;
   name: string;
   symbol: string | null;
   image: string | null;
@@ -19,32 +19,21 @@ export type AssetChipData = {
   state: "loading" | "ready" | "error" | "missing";
 };
 
-/** The swatch tying a chip (and a table column) to its line on the chart. */
-export function Swatch({ slot, className }: { slot: number; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={className ?? "h-6 w-1 shrink-0"}
-      style={{
-        backgroundColor: `var(${COMPARE_COLOR_TOKENS[slot % COMPARE_COLOR_TOKENS.length]})`,
-      }}
-    />
-  );
-}
-
 /**
- * The assets being compared, as a legend: color, name, how each did over the
- * range, and a remove button. A chip whose chart failed says so and offers a retry
- * rather than silently missing from the graph.
+ * The assets being compared, as a legend: color (click it to change), name, how
+ * each did over the range, and a remove button. A chip whose chart failed says so
+ * and offers a retry rather than silently missing from the graph.
  */
 export function AssetChips({
   assets,
   onRemove,
   onRetry,
+  onColor,
 }: {
   assets: readonly AssetChipData[];
   onRemove: (id: string) => void;
   onRetry: (id: string) => void;
+  onColor: (id: string, color: number) => void;
 }) {
   if (assets.length === 0) return null;
   return (
@@ -54,7 +43,11 @@ export function AssetChips({
           key={asset.id}
           className="flex h-[3.625rem] items-center gap-3 border border-primary pr-1 pl-3"
         >
-          <Swatch slot={asset.slot} className="h-8 w-1 shrink-0" />
+          <ColorPicker
+            assetName={asset.name}
+            value={asset.color}
+            onChange={(color) => onColor(asset.id, color)}
+          />
           <CoinLogo src={asset.image} name={asset.name} size={24} />
           <span className="min-h-10 min-w-0 leading-tight">
             <span className="block max-w-[10rem] truncate text-body-md text-primary">

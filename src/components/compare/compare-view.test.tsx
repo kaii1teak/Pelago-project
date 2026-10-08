@@ -25,14 +25,16 @@ vi.mock(
 vi.mock("next/dynamic", () => ({
   default: () =>
     function MockCanvas(props: {
+      view: string;
       range: string;
-      series: { id: string; slot: number; points: { value: number }[] }[];
+      series: { id: string; color: number; points: { value: number }[] }[];
     }) {
       return (
         <div
           data-testid="canvas"
           data-range={props.range}
-          data-series={props.series.map((s) => `${s.id}:${s.slot}`).join(",")}
+          data-view={props.view}
+          data-series={props.series.map((s) => `${s.id}:${s.color}`).join(",")}
           data-last={props.series.map((s) => s.points.at(-1)!.value.toFixed(1)).join(",")}
         />
       );
@@ -136,7 +138,7 @@ const canvas = () => screen.findByTestId("canvas");
 
 beforeEach(() => {
   localStorage.clear();
-  useCompareStore.setState({ ids: [] });
+  useCompareStore.setState({ ids: [], colors: {} });
   window.history.replaceState(null, "", "/compare");
   installHistoryMock();
   charts = {};
@@ -170,7 +172,7 @@ describe("CompareView: before and without a selection", () => {
       screen.getByRole("button", { name: "Try Bitcoin vs Ethereum" }),
     );
     expect(useCompareStore.getState().ids).toEqual(["bitcoin", "ethereum"]);
-    expect((await canvas()).dataset.series).toBe("bitcoin:0,ethereum:1");
+    expect((await canvas()).dataset.series).toBe("bitcoin:0,ethereum:7");
   });
 
   it("asks for a second asset when there is only one", async () => {
@@ -183,13 +185,13 @@ describe("CompareView: before and without a selection", () => {
 });
 
 describe("CompareView: comparing", () => {
-  it("draws each asset as percent change from a shared start, one color slot each", async () => {
+  it("draws each asset as percent change from a shared start, its own color each", async () => {
     api();
     await savedSelection(["bitcoin", "ethereum", "solana"]);
     renderWithClient(<CompareView />);
 
     const el = await canvas();
-    expect(el.dataset.series).toBe("bitcoin:0,ethereum:1,solana:2");
+    expect(el.dataset.series).toBe("bitcoin:0,ethereum:7,solana:3");
     expect(el.dataset.last).toBe("20.0,-20.0,50.0");
     expect(el.dataset.range).toBe("7d");
   });
@@ -201,7 +203,7 @@ describe("CompareView: comparing", () => {
     await canvas();
     expect(
       screen.getByRole("img", {
-        name: "Percent change over 7 days: Bitcoin +20.00%, Ethereum -20.00%.",
+        name: "Percent change over 7 days. Bitcoin +20.00%, Ethereum -20.00%.",
       }),
     ).toBeVisible();
   });
@@ -292,7 +294,7 @@ describe("CompareView: choosing assets", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("canvas").dataset.series).toBe(
-        "bitcoin:0,ethereum:1,solana:2",
+        "bitcoin:0,ethereum:7,solana:3",
       ),
     );
     expect(useCompareStore.getState().ids).toEqual(["bitcoin", "ethereum", "solana"]);
@@ -333,7 +335,7 @@ describe("CompareView: choosing assets", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove Ethereum" }));
 
     await waitFor(() =>
-      expect(screen.getByTestId("canvas").dataset.series).toBe("bitcoin:0,solana:1"),
+      expect(screen.getByTestId("canvas").dataset.series).toBe("bitcoin:0,solana:3"),
     );
     expect(useCompareStore.getState().ids).toEqual(["bitcoin", "solana"]);
     expect(window.location.search).toBe("?assets=bitcoin,solana");
@@ -363,6 +365,155 @@ describe("CompareView: choosing assets", () => {
   });
 });
 
+describe("CompareView: line colors", () => {
+  it("gives each asset a different default color", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum", "solana"]);
+    renderWithClient(<CompareView />);
+    const colors = (await canvas()).dataset
+      .series!.split(",")
+      .map((x) => x.split(":")[1]);
+    expect(new Set(colors).size).toBe(3);
+  });
+
+  it("changes a line's color from its chip, on the chart and in the saved list", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum"]);
+    renderWithClient(<CompareView />);
+    await canvas();
+
+    await userEvent.click(screen.getByRole("button", { name: /Color of Bitcoin/ }));
+    await userEvent.click(screen.getByRole("radio", { name: "Magenta" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("canvas").dataset.series).toBe("bitcoin:5,ethereum:7"),
+    );
+    expect(useCompareStore.getState().colors.bitcoin).toBe(5);
+    expect(
+      JSON.parse(localStorage.getItem(COMPARE_STORAGE_KEY)!).state.colors.bitcoin,
+    ).toBe(5);
+  });
+
+  it("swaps with the asset that already has the chosen color, so two lines never look alike", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum"]);
+    renderWithClient(<CompareView />);
+    await canvas();
+
+    await userEvent.click(screen.getByRole("button", { name: /Color of Bitcoin/ }));
+    await userEvent.click(screen.getByRole("radio", { name: "Cyan" })); // ethereum's
+    await waitFor(() =>
+      expect(screen.getByTestId("canvas").dataset.series).toBe("bitcoin:7,ethereum:0"),
+    );
+  });
+
+  it("keeps a chosen color when other assets come and go", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum", "solana"]);
+    renderWithClient(<CompareView />);
+    await canvas();
+    await userEvent.click(screen.getByRole("button", { name: /Color of Solana/ }));
+    await userEvent.click(screen.getByRole("radio", { name: "Green" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove Bitcoin" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("canvas").dataset.series).toBe("ethereum:7,solana:9"),
+    );
+  });
+
+  it("remembers the choice after a reload", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum"]);
+    const first = renderWithClient(<CompareView />);
+    await canvas();
+    await userEvent.click(screen.getByRole("button", { name: /Color of Ethereum/ }));
+    await userEvent.click(screen.getByRole("radio", { name: "Pink" }));
+    first.unmount();
+
+    // A reload: memory is empty, but what was saved is still in storage.
+    const saved = localStorage.getItem(COMPARE_STORAGE_KEY)!;
+    useCompareStore.setState({ ids: [], colors: {} });
+    localStorage.setItem(COMPARE_STORAGE_KEY, saved);
+    await act(async () => {
+      await useCompareStore.persist.rehydrate();
+    });
+    renderWithClient(<CompareView />);
+    expect((await canvas()).dataset.series).toBe("bitcoin:0,ethereum:1");
+  });
+});
+
+describe("CompareView: percent or price", () => {
+  it("shows percent change by default, every line starting at 0%", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum"]);
+    renderWithClient(<CompareView />);
+    const el = await canvas();
+    expect(el.dataset.view).toBe("change");
+    expect(el.dataset.last).toBe("20.0,-20.0");
+    expect(screen.getByText(/every line begins at 0%/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "% change" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("switches to the real prices, from the same shared start, and records it in the URL", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum"]);
+    renderWithClient(<CompareView />);
+    await canvas();
+
+    await userEvent.click(screen.getByRole("button", { name: "Price" }));
+    const el = await canvas();
+    expect(el.dataset.view).toBe("price");
+    expect(el.dataset.last).toBe("120.0,40.0"); // the last prices, not percentages
+    expect(window.location.search).toBe("?assets=bitcoin,ethereum&view=price");
+    expect(screen.getByText(/logarithmic scale/)).toBeVisible();
+  });
+
+  it("goes back to percent change, and leaves the URL clean again", async () => {
+    api();
+    window.history.replaceState(null, "", "/compare?assets=bitcoin,ethereum&view=price");
+    await savedSelection(["bitcoin", "ethereum"]);
+    renderWithClient(<CompareView />);
+    expect((await canvas()).dataset.view).toBe("price");
+
+    await userEvent.click(screen.getByRole("button", { name: "% change" }));
+    expect((await canvas()).dataset.view).toBe("change");
+    expect(window.location.search).toBe("?assets=bitcoin,ethereum");
+  });
+
+  it("keeps the view when the range or the assets change", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum"]);
+    renderWithClient(<CompareView />);
+    await canvas();
+    await userEvent.click(screen.getByRole("button", { name: "Price" }));
+    await userEvent.click(screen.getByRole("tab", { name: "30D" }));
+    await waitFor(() =>
+      expect(window.location.search).toBe(
+        "?assets=bitcoin,ethereum&view=price&range=30d",
+      ),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Remove Ethereum" }));
+    await waitFor(() =>
+      expect(window.location.search).toBe("?assets=bitcoin&view=price&range=30d"),
+    );
+    expect((await canvas()).dataset.view).toBe("price");
+  });
+
+  it("describes the price view for screen readers", async () => {
+    api();
+    await savedSelection(["bitcoin", "ethereum"]);
+    renderWithClient(<CompareView />);
+    await canvas();
+    await userEvent.click(screen.getByRole("button", { name: "Price" }));
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      /^Prices over 7 days, on a logarithmic scale\./,
+    );
+  });
+});
+
 describe("CompareView: the link and the saved selection agree", () => {
   it("writes the saved selection into the address bar", async () => {
     api();
@@ -381,7 +532,7 @@ describe("CompareView: the link and the saved selection agree", () => {
     await waitFor(() =>
       expect(useCompareStore.getState().ids).toEqual(["ethereum", "solana"]),
     );
-    expect((await canvas()).dataset.series).toBe("ethereum:0,solana:1");
+    expect((await canvas()).dataset.series).toBe("ethereum:0,solana:7");
     expect(window.location.search).toBe("?assets=ethereum,solana");
   });
 
@@ -443,7 +594,7 @@ describe("CompareView: when data fails", () => {
     charts = {}; // the next try succeeds
     await userEvent.click(retry);
     await waitFor(() =>
-      expect(screen.getByTestId("canvas").dataset.series).toBe("bitcoin:0,ethereum:1"),
+      expect(screen.getByTestId("canvas").dataset.series).toBe("bitcoin:0,ethereum:7"),
     );
   });
 
@@ -470,7 +621,7 @@ describe("CompareView: when data fails", () => {
 
     charts = {};
     await userEvent.click(screen.getByRole("button", { name: /try again/i }));
-    expect((await canvas()).dataset.series).toBe("bitcoin:0,ethereum:1");
+    expect((await canvas()).dataset.series).toBe("bitcoin:0,ethereum:7");
   });
 
   it("holds a skeleton while the charts load", async () => {

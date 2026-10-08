@@ -14,8 +14,10 @@ export type ChartTheme = {
   gridStrong: string;
   inverse: string;
   inverseText: string;
-  up: string;
-  down: string;
+  candleUp: string;
+  candleUpLine: string;
+  candleDown: string;
+  candleDownLine: string;
   fontFamily: string;
 };
 
@@ -46,8 +48,10 @@ export function readChartTheme(host: HTMLElement): ChartTheme {
     gridStrong: resolveColor(host, "--border-strong"),
     inverse: resolveColor(host, "--bg-inverse"),
     inverseText: resolveColor(host, "--text-inverse"),
-    up: resolveColor(host, "--success"),
-    down: resolveColor(host, "--critical"),
+    candleUp: resolveColor(host, "--candle-up"),
+    candleUpLine: resolveColor(host, "--candle-up-line"),
+    candleDown: resolveColor(host, "--candle-down"),
+    candleDownLine: resolveColor(host, "--candle-down-line"),
     fontFamily,
   };
 }

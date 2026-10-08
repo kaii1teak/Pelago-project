@@ -140,6 +140,41 @@ export const trendingSchema = z
   );
 export type TrendingCoin = z.output<typeof trendingSchema>[number];
 
+/* ---- /search -------------------------------------------------------------- */
+
+/** How many matches the palette ever shows. */
+export const MAX_SEARCH_RESULTS = 8;
+
+/**
+ * Only `coins` is read (the response also lists exchanges, categories, NFTs...).
+ * Kept lean: the palette needs a name, a symbol, a rank for ordering and a logo.
+ */
+export const searchSchema = z
+  .object({
+    coins: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        symbol: z.string(),
+        market_cap_rank: looseNumber,
+        large: z
+          .string()
+          .nullish()
+          .transform((v) => v ?? null),
+      }),
+    ),
+  })
+  .transform(({ coins }) =>
+    coins.slice(0, MAX_SEARCH_RESULTS).map((c) => ({
+      id: c.id,
+      name: c.name,
+      symbol: c.symbol.toUpperCase(),
+      rank: c.market_cap_rank,
+      image: c.large,
+    })),
+  );
+export type SearchResult = z.output<typeof searchSchema>[number];
+
 /* ---- /coins/{id} ---------------------------------------------------------- */
 
 // Most market fields arrive as {usd: n, eur: n, ...} dictionaries; only USD is used.

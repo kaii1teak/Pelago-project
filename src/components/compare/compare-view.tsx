@@ -4,6 +4,7 @@ import { GitCompareArrows } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -11,12 +12,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useChartUrlState } from "@/hooks/use-chart-url-state";
 import { useCompareUrlSync } from "@/hooks/use-compare-url-sync";
+import { useCompareView } from "@/hooks/use-compare-view";
 import { useRequestedIds } from "@/hooks/use-requested-ids";
 import { useCoinCharts, useMarkets, useMarketsByIds } from "@/lib/api/hooks";
 import { isApiError } from "@/lib/api/errors";
 import type { MarketCoin } from "@/lib/api/schemas";
 import { CHART_DAYS, CHART_RANGES, RANGE_NAME, isChartRange } from "@/lib/chart";
 import {
+  type CompareView,
   MAX_COMPARE,
   alignPercentSeries,
   findLateStarter,
@@ -37,6 +40,11 @@ const CompareCanvas = dynamic(() => import("./compare-canvas"), {
   loading: () => <Skeleton className="h-chart w-full rounded-none" />,
 });
 
+const VIEW_OPTIONS = [
+  { value: "change", label: "% change" },
+  { value: "price", label: "Price" },
+] as const satisfies readonly { value: CompareView; label: string }[];
+
 const NO_IDS: readonly string[] = [];
 const NO_POINTS: readonly { time: number; value: number }[] = [];
 /** A late-starting asset is worth a note when it shifts the shared start by more than this share of the range. */
@@ -53,7 +61,10 @@ export function CompareView() {
   const add = useCompareStore((s) => s.add);
   const remove = useCompareStore((s) => s.remove);
   const setIds = useCompareStore((s) => s.set);
+  const colors = useCompareStore((s) => s.colors);
+  const setColor = useCompareStore((s) => s.setColor);
   const { range, setRange } = useChartUrlState();
+  const { view, setView } = useCompareView();
   useCompareUrlSync(hydrated, ids, setIds);
 
   /* ---- data --------------------------------------------------------------- */
@@ -81,18 +92,18 @@ export function CompareView() {
     [charts, range],
   );
 
-  const assets: AssetChipData[] = ids.map((id, slot) => {
+  const assets: AssetChipData[] = ids.map((id, index) => {
     const coin = coinById.get(id);
-    const chart = charts[slot];
+    const chart = charts[index];
     const missing =
       chart?.isError && isApiError(chart.error) && chart.error.code === "not_found";
     return {
       id,
-      slot,
+      color: colors[id] ?? 0,
       name: coin?.name ?? id,
       symbol: coin?.symbol ?? null,
       image: coin?.image ?? null,
-      change: totalReturn(aligned.series[slot] ?? []),
+      change: totalReturn(aligned.series[index] ?? []),
       state: missing
         ? "missing"
         : chart?.isError
@@ -103,17 +114,21 @@ export function CompareView() {
     };
   });
 
+  // Percent change, or the prices themselves, from the same shared start.
+  const plotted = view === "price" ? aligned.raw : aligned.series;
   const series = useMemo<CompareSeries[]>(
     () =>
-      aligned.series.flatMap((points, slot) =>
-        points.length > 1 && ids[slot] ? [{ id: ids[slot], slot, points }] : [],
+      plotted.flatMap((points, index) =>
+        points.length > 1 && ids[index]
+          ? [{ id: ids[index], color: colors[ids[index]!] ?? 0, points }]
+          : [],
       ),
-    [aligned, ids],
+    [plotted, ids, colors],
   );
 
   const statsAssets: StatsAsset[] = assets.map((a) => ({
     id: a.id,
-    slot: a.slot,
+    color: a.color,
     name: a.name,
     image: a.image,
     coin: coinById.get(a.id),
@@ -164,9 +179,11 @@ export function CompareView() {
   const moves = assets
     .filter((a) => a.change !== null)
     .map((a) => `${a.name} ${formatPercent(a.change)}`);
-  const chartLabel = moves.length
-    ? `Percent change over ${rangeLabel}: ${moves.join(", ")}.`
-    : `Percent change over ${rangeLabel}.`;
+  const chartLabel =
+    (view === "price"
+      ? `Prices over ${rangeLabel}, on a logarithmic scale.`
+      : `Percent change over ${rangeLabel}.`) +
+    (moves.length ? ` ${moves.join(", ")}.` : "");
 
   let panel: React.ReactNode;
   if (ids.length === 0) {
@@ -220,11 +237,12 @@ export function CompareView() {
         <CompareLegend
           info={hover}
           entries={assets.flatMap((a) =>
-            a.symbol ? [{ id: a.id, slot: a.slot, symbol: a.symbol }] : [],
+            a.symbol ? [{ id: a.id, color: a.color, symbol: a.symbol }] : [],
           )}
           range={range}
+          view={view}
         />
-        <CompareCanvas series={series} range={range} onCrosshair={setHover} />
+        <CompareCanvas series={series} range={range} view={view} onCrosshair={setHover} />
       </div>
     );
   }
@@ -249,6 +267,7 @@ export function CompareView() {
           assets={assets}
           onRemove={onRemove}
           onRetry={(id) => charts[ids.indexOf(id)]?.refetch()}
+          onColor={setColor}
         />
         {ids.length === 1 && (
           <p className="text-body-md text-secondary">
@@ -278,12 +297,22 @@ export function CompareView() {
                 </TabsTrigger>
               ))}
             </TabsList>
-            <p className="num text-mono-sm text-muted">% change from a shared start</p>
+            <SegmentedControl
+              label="Chart values"
+              value={view}
+              onValueChange={setView}
+              options={VIEW_OPTIONS}
+            />
           </div>
           <TabsContent value={range} forceMount className="mt-0 border-t border-primary">
             {panel}
           </TabsContent>
         </Tabs>
+        <p className="mt-3 num text-mono-sm text-muted">
+          {view === "price"
+            ? "Prices in USD on a logarithmic scale: equal percentage moves look equal."
+            : "Percent change from a shared start: every line begins at 0%."}
+        </p>
         {lateStarter && lateName && series.length > 0 && (
           <p className="mt-4 text-body-md text-secondary">
             {lateName} only has data since {formatDate(lateStarter.start * 1000)}, so

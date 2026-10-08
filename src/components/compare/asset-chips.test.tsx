@@ -1,11 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { AssetChips, Swatch, type AssetChipData } from "./asset-chips";
+import { AssetChips, type AssetChipData } from "./asset-chips";
+import { Swatch } from "./color-picker";
 
 const base: AssetChipData = {
   id: "bitcoin",
-  slot: 0,
+  color: 0,
   name: "Bitcoin",
   symbol: "BTC",
   image: null,
@@ -16,14 +17,27 @@ const base: AssetChipData = {
 function setup(assets: AssetChipData[]) {
   const onRemove = vi.fn();
   const onRetry = vi.fn();
-  render(<AssetChips assets={assets} onRemove={onRemove} onRetry={onRetry} />);
-  return { onRemove, onRetry, user: userEvent.setup() };
+  const onColor = vi.fn();
+  render(
+    <AssetChips
+      assets={assets}
+      onRemove={onRemove}
+      onRetry={onRetry}
+      onColor={onColor}
+    />,
+  );
+  return { onRemove, onRetry, onColor, user: userEvent.setup() };
 }
 
 describe("AssetChips", () => {
   it("renders nothing when there are no assets", () => {
     const { container } = render(
-      <AssetChips assets={[]} onRemove={() => {}} onRetry={() => {}} />,
+      <AssetChips
+        assets={[]}
+        onRemove={() => {}}
+        onRetry={() => {}}
+        onColor={() => {}}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -31,7 +45,14 @@ describe("AssetChips", () => {
   it("lists each asset with its name, symbol and change over the range", () => {
     setup([
       base,
-      { ...base, id: "ethereum", slot: 1, name: "Ethereum", symbol: "ETH", change: -3.4 },
+      {
+        ...base,
+        id: "ethereum",
+        color: 7,
+        name: "Ethereum",
+        symbol: "ETH",
+        change: -3.4,
+      },
     ]);
     const list = screen.getByRole("list", { name: "Assets being compared" });
     const items = within(list).getAllByRole("listitem");
@@ -70,15 +91,15 @@ describe("AssetChips", () => {
 });
 
 describe("Swatch", () => {
-  it("takes its color from the design token for its slot, so it follows the theme", () => {
-    const { container } = render(<Swatch slot={1} />);
+  it("takes its color from the design token for its color, so it follows the theme", () => {
+    const { container } = render(<Swatch color={7} />);
     const el = container.firstElementChild as HTMLElement;
     expect(el).toHaveAttribute("aria-hidden", "true");
     expect(el.style.backgroundColor).toBe("var(--chart-8-line)");
   });
 
-  it("wraps around if there are more assets than colors", () => {
-    const { container } = render(<Swatch slot={4} />);
+  it("wraps around rather than showing nothing for an unknown color", () => {
+    const { container } = render(<Swatch color={10} />);
     expect((container.firstElementChild as HTMLElement).style.backgroundColor).toBe(
       "var(--chart-1-line)",
     );

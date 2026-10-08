@@ -35,30 +35,9 @@ describe("AssetMarquee", () => {
     expect(screen.getAllByRole("link")).toHaveLength(20);
   });
 
-  it("has a real pause control, not just hover (WCAG 2.2.2)", async () => {
+  it("has no Pause button: it is decoration, and nothing in it needs operating", () => {
     setup();
-    const pause = screen.getByRole("button", { name: "Pause ticker" });
-    expect(pause).toHaveAttribute("aria-pressed", "false");
-    const track = pause.parentElement!.querySelector(".animate-marquee")!;
-    expect(track).not.toHaveClass("[animation-play-state:paused]");
-
-    await userEvent.click(pause);
-    expect(pause).toHaveAttribute("aria-pressed", "true");
-    expect(track).toHaveClass("[animation-play-state:paused]");
-
-    await userEvent.click(pause);
-    expect(pause).toHaveAttribute("aria-pressed", "false");
-  });
-
-  it("the pause button is keyboard operable", async () => {
-    setup();
-    await userEvent.tab();
-    expect(screen.getByRole("button", { name: "Pause ticker" })).toHaveFocus();
-    await userEvent.keyboard("{Enter}");
-    expect(screen.getByRole("button", { name: "Pause ticker" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("pauses while hovered, and drops all motion under reduced motion", () => {
@@ -68,16 +47,15 @@ describe("AssetMarquee", () => {
     expect(track.className).toContain("motion-reduce:animate-none");
   });
 
-  it("is a single tab stop: the 20 links are out of the tab order but still real links", async () => {
+  it("is not in the tab order: the 20 links are real links but never tab stops", async () => {
     setup();
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(20);
     for (const link of links) expect(link).toHaveAttribute("tabindex", "-1");
 
     await userEvent.tab();
-    expect(screen.getByRole("button", { name: "Pause ticker" })).toHaveFocus();
-    await userEvent.tab(); // nothing else focusable in the strip: focus leaves it
     expect(links.some((l) => l === document.activeElement)).toBe(false);
+    expect(document.body).toHaveFocus();
   });
 
   it("holds its height with a placeholder while loading", () => {

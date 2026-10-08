@@ -2,22 +2,26 @@ import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { COIN_ID_PATTERN } from "@/lib/chart";
-import { MAX_COMPARE } from "@/lib/compare";
+import { MAX_COMPARE, assignColors, withColor } from "@/lib/compare";
 
 export const COMPARE_STORAGE_KEY = "pelago-compare";
 
 type CompareState = {
-  /** Coin ids being compared, in the order they were picked (that order sets their colors). */
+  /** Coin ids being compared, in the order they were picked. */
   ids: string[];
+  /** The line color of each (an index into COMPARE_PALETTE). Always one per id, never shared. */
+  colors: Record<string, number>;
   add: (id: string) => void;
   remove: (id: string) => void;
-  /** Replace the whole list (opening a shared link). */
+  /** Replace the whole list (opening a shared link). Colors of assets that stay are kept. */
   set: (ids: readonly string[]) => void;
+  /** Give `id` this color; whoever had it gets the color `id` had. */
+  setColor: (id: string, color: number) => void;
   clear: () => void;
 };
 
 /** Anything stored is user-editable text: keep only valid, unique ids, capped. */
-const clean = (ids: unknown): string[] =>
+const cleanIds = (ids: unknown): string[] =>
   Array.isArray(ids)
     ? [
         ...new Set(
@@ -28,6 +32,9 @@ const clean = (ids: unknown): string[] =>
       ].slice(0, MAX_COMPARE)
     : [];
 
+const cleanColors = (colors: unknown): Record<string, number> =>
+  typeof colors === "object" && colors !== null ? (colors as Record<string, number>) : {};
+
 /**
  * Persisted to localStorage, hydrated after mount for the same reason as the
  * watchlist (see its `skipHydration` note): the server renders the empty list.
@@ -36,23 +43,38 @@ export const useCompareStore = create<CompareState>()(
   persist(
     (set) => ({
       ids: [],
+      colors: {},
       add: (id) =>
-        set((s) =>
-          s.ids.includes(id) || s.ids.length >= MAX_COMPARE ? s : { ids: [...s.ids, id] },
-        ),
-      remove: (id) => set((s) => ({ ids: s.ids.filter((x) => x !== id) })),
-      set: (ids) => set({ ids: clean(ids) }),
-      clear: () => set({ ids: [] }),
+        set((s) => {
+          if (s.ids.includes(id) || s.ids.length >= MAX_COMPARE) return s;
+          const ids = [...s.ids, id];
+          return { ids, colors: assignColors(ids, s.colors) };
+        }),
+      remove: (id) =>
+        set((s) => {
+          const ids = s.ids.filter((x) => x !== id);
+          // The others keep their colors; the removed one's color becomes free again.
+          return { ids, colors: assignColors(ids, s.colors) };
+        }),
+      set: (next) =>
+        set((s) => {
+          const ids = cleanIds(next);
+          return { ids, colors: assignColors(ids, s.colors) };
+        }),
+      setColor: (id, color) => set((s) => ({ colors: withColor(s.colors, id, color) })),
+      clear: () => set({ ids: [], colors: {} }),
     }),
     {
       name: COMPARE_STORAGE_KEY,
       version: 1,
       skipHydration: true,
-      partialize: (s) => ({ ids: s.ids }),
-      merge: (persisted, current) => ({
-        ...current,
-        ids: clean((persisted as { ids?: unknown } | null)?.ids),
-      }),
+      partialize: (s) => ({ ids: s.ids, colors: s.colors }),
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as { ids?: unknown; colors?: unknown };
+        const ids = cleanIds(saved.ids);
+        // Older saves have no colors; bad ones are repaired, not trusted.
+        return { ...current, ids, colors: assignColors(ids, cleanColors(saved.colors)) };
+      },
     },
   ),
 );

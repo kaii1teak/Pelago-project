@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CommandTrigger } from "@/components/command/command-trigger";
 import { NAV_LINKS, isActivePath } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "./mobile-nav";
@@ -44,6 +45,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-1">
+          <CommandTrigger />
           <ThemeToggle />
           <MobileNav />
         </div>

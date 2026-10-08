@@ -12,7 +12,11 @@ vi.mock(
   async () => (await import("@/test/navigation")).navigationMock,
 );
 
-// Stand-in for the dynamically imported canvas: expose what it was handed.
+// What the stand-in canvas reports back to the tests (hoisted: vi.mock runs first).
+const canvas = vi.hoisted(() => ({ zoomIn: vi.fn(), zoomOut: vi.fn() }));
+
+// Stand-in for the dynamically imported canvas: expose what it was handed, and a way to
+// act as the real one does when the user scrolls to the start of the data.
 vi.mock("next/dynamic", () => ({
   default: () =>
     function MockChart(props: {
@@ -20,7 +24,15 @@ vi.mock("next/dynamic", () => ({
       range: string;
       line: unknown[];
       candles: unknown[];
+      scale: string;
+      hasMore: boolean;
+      resetKey: number;
+      onNearStart?: () => void;
+      controlsRef?: { current: unknown };
     }) {
+      if (props.controlsRef) {
+        props.controlsRef.current = { zoomIn: canvas.zoomIn, zoomOut: canvas.zoomOut };
+      }
       return (
         <div
           data-testid="chart"
@@ -28,7 +40,14 @@ vi.mock("next/dynamic", () => ({
           data-range={props.range}
           data-line={props.line.length}
           data-candles={props.candles.length}
-        />
+          data-scale={props.scale}
+          data-has-more={String(props.hasMore)}
+          data-reset={props.resetKey}
+        >
+          <button type="button" onClick={props.onNearStart}>
+            simulate scrolling to the start
+          </button>
+        </div>
       );
     },
 }));
@@ -55,7 +74,11 @@ const setup = (url = "/coin/bitcoin", seed?: (c: QueryClient) => void) => {
 const search = () => window.location.search;
 const chart = () => screen.getByTestId("chart");
 
-beforeEach(() => installHistoryMock());
+beforeEach(() => {
+  installHistoryMock();
+  canvas.zoomIn.mockReset();
+  canvas.zoomOut.mockReset();
+});
 afterEach(() => {
   uninstallHistoryMock();
   vi.unstubAllGlobals();
@@ -298,5 +321,200 @@ describe("PriceChart: summary and accessibility", () => {
     setup();
     expect(screen.queryByRole("alert")).toBeNull();
     act(() => {});
+  });
+});
+
+/* ---- the axis scale, zoom, and scrolling back in time ----------------------- */
+
+const older = [
+  { time: -3, value: 80 },
+  { time: -2, value: 85 },
+  { time: -1, value: 70 },
+];
+/** A fetch that answers the older stretch (back=1) with `older`, or as told. */
+function olderApi(reply: "ok" | "fail" | "pending" = "ok") {
+  const fetchMock = vi.fn<typeof fetch>(async (input) => {
+    if (!String(input).includes("back=")) return new Response(JSON.stringify(line));
+    if (reply === "pending") return new Promise<Response>(() => {});
+    if (reply === "fail") {
+      return new Response(
+        JSON.stringify({ error: { code: "upstream_error", message: "x" } }),
+        {
+          status: 502,
+        },
+      );
+    }
+    return new Response(JSON.stringify(older));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+const nearStart = () =>
+  screen.getByRole("button", { name: "simulate scrolling to the start" });
+
+describe("PriceChart: price axis", () => {
+  it("offers Price and % for the line chart, defaulting to price", () => {
+    setup();
+    const group = screen.getByRole("group", { name: "Price axis" });
+    expect(within(group).getByRole("button", { name: "Price" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(chart()).toHaveAttribute("data-scale", "price");
+  });
+
+  it("switches the chart to percent change and records it in the URL", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "%" }));
+    expect(chart()).toHaveAttribute("data-scale", "percent");
+    expect(search()).toBe("?scale=percent");
+  });
+
+  it("writes range, chart type and axis in one fixed order", async () => {
+    setup("/coin/bitcoin?scale=percent");
+    await userEvent.click(screen.getByRole("tab", { name: "30D" }));
+    expect(search()).toBe("?range=30d&scale=percent");
+  });
+
+  it("restores the percent axis from the link", () => {
+    setup("/coin/bitcoin?scale=percent");
+    expect(chart()).toHaveAttribute("data-scale", "percent");
+    expect(screen.getByRole("button", { name: "%" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("has no axis choice for candles: they are always priced in dollars", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(candles)));
+    vi.stubGlobal("fetch", fetchMock);
+    setup("/coin/bitcoin?mode=candle");
+    expect(screen.queryByRole("group", { name: "Price axis" })).toBeNull();
+  });
+});
+
+describe("PriceChart: zoom", () => {
+  it("has buttons that zoom the chart", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    await userEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+    expect(canvas.zoomIn).toHaveBeenCalledTimes(1);
+    expect(canvas.zoomOut).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("PriceChart: scrolling back in time", () => {
+  it("starts with the timeframe's own window and says how to go further back", () => {
+    olderApi();
+    setup();
+    expect(chart()).toHaveAttribute("data-line", String(line.length));
+    expect(chart()).toHaveAttribute("data-has-more", "true");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /Drag the chart to go back in time/,
+    );
+  });
+
+  it("loads older data when the chart reaches the start of what it has, and adds it to the chart", async () => {
+    const fetchMock = olderApi();
+    setup();
+    await userEvent.click(nearStart());
+
+    await waitFor(() =>
+      expect(chart()).toHaveAttribute("data-line", String(line.length + older.length)),
+    );
+    const urls = fetchMock.mock.calls.map(([u]) => String(u));
+    expect(urls).toContain("/api/coins/bitcoin/chart?range=7d&back=1");
+  });
+
+  it("does not change the timeframe's own numbers as older data comes in", async () => {
+    olderApi();
+    setup();
+    const summary = () =>
+      screen.getByRole("group", { name: "7 days summary" }).textContent;
+    const before = summary();
+    await userEvent.click(nearStart());
+    await waitFor(() =>
+      expect(chart()).toHaveAttribute("data-line", String(line.length + older.length)),
+    );
+    expect(summary()).toBe(before);
+  });
+
+  it("says while it is loading, and offers a retry when it fails", async () => {
+    olderApi("pending");
+    setup();
+    await userEvent.click(nearStart());
+    expect(await screen.findByText("Loading earlier data…")).toBeVisible();
+  });
+
+  it("keeps what is on screen and offers a retry when older data fails", async () => {
+    olderApi("fail");
+    setup();
+    await userEvent.click(nearStart());
+    expect(await screen.findByText("Couldn't load earlier data.")).toBeVisible();
+    expect(chart()).toHaveAttribute("data-line", String(line.length));
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+  });
+
+  it("goes back to the latest window when the selected timeframe is pressed again", async () => {
+    olderApi();
+    setup();
+    await userEvent.click(nearStart());
+    await waitFor(() =>
+      expect(chart()).toHaveAttribute("data-line", String(line.length + older.length)),
+    );
+    const resets = Number(chart().getAttribute("data-reset"));
+
+    await userEvent.click(screen.getByRole("tab", { name: "7D" }));
+    await waitFor(() =>
+      expect(chart()).toHaveAttribute("data-line", String(line.length)),
+    );
+    expect(Number(chart().getAttribute("data-reset"))).toBe(resets + 1);
+    expect(search()).toBe(""); // still the default timeframe: nothing to record
+  });
+
+  it("goes back to the latest window with the Latest button too", async () => {
+    olderApi();
+    setup();
+    await userEvent.click(nearStart());
+    await waitFor(() =>
+      expect(chart()).toHaveAttribute("data-line", String(line.length + older.length)),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Latest" }));
+    await waitFor(() =>
+      expect(chart()).toHaveAttribute("data-line", String(line.length)),
+    );
+  });
+
+  it("starts from the latest window again when another timeframe is picked", async () => {
+    olderApi();
+    setup();
+    await userEvent.click(nearStart());
+    await waitFor(() =>
+      expect(chart()).toHaveAttribute("data-line", String(line.length + older.length)),
+    );
+    await userEvent.click(screen.getByRole("tab", { name: "30D" }));
+    // The 30D chart is a different dataset: none of the 7D history is mixed into it.
+    await waitFor(() => expect(chart()).toHaveAttribute("data-range", "30d"));
+    expect(chart()).not.toHaveAttribute("data-line", String(line.length + older.length));
+  });
+
+  it("does not offer older history for the 1Y chart: it already holds the year", () => {
+    olderApi();
+    setup("/coin/bitcoin?range=1y", (c) =>
+      c.setQueryData(queryKeys.coinChart("bitcoin", "1y"), line),
+    );
+    expect(chart()).toHaveAttribute("data-has-more", "false");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /1Y chart already holds the full year/,
+    );
+  });
+
+  it("explains that candles only cover the selected range", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(candles))),
+    );
+    setup("/coin/bitcoin?mode=candle");
+    expect(screen.getByText(/Candles cover the selected range only/)).toBeVisible();
   });
 });

@@ -47,6 +47,21 @@ export function toCandleSeries(rows: readonly (readonly (number | null)[])[]): C
   return ascendingUnique(candles);
 }
 
+/**
+ * Joins the pieces of one history (the latest window first, then each older one) into
+ * a single series: ascending, one point per time. Where two pieces overlap (the
+ * edges are rounded to the hour) the earlier-listed piece wins, so the freshest
+ * data is never replaced by a re-fetched copy.
+ */
+export function mergeLineSeries(pieces: readonly (readonly LinePoint[])[]): LinePoint[] {
+  const byTime = new Map<number, LinePoint>();
+  // Last write wins in a Map, so walk the pieces from the last to the first.
+  for (let i = pieces.length - 1; i >= 0; i--) {
+    for (const point of pieces[i]!) byTime.set(point.time, point);
+  }
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
+}
+
 export type SeriesSummary = {
   first: number;
   last: number;

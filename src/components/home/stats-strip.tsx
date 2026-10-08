@@ -115,13 +115,15 @@ export function StatsStrip() {
   const refreshFailing = global.isError || markets.isError;
 
   return (
-    <section aria-label="Market overview" className="border-t border-primary">
+    // line-fade-top (globals.css) draws the hairlines above the numbers and above the
+    // live badge so that they fade out at both ends. Tune --line-fade-size there.
+    <section aria-label="Market overview" className="line-fade-top">
       <dl className="grid grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <StatCell key={stat.label} {...stat} />
         ))}
       </dl>
-      <div className="border-t border-primary px-4 py-3">
+      <div className="line-fade-top px-4 py-3">
         <LiveBadge status={refreshFailing ? "offline" : "live"} />
       </div>
     </section>

@@ -81,79 +81,89 @@ export function FeaturesSection() {
       style={{ "--steps": FEATURES.length - 1 } as React.CSSProperties}
       className="lg:feature-track"
     >
-      <div className="page-container lg:sticky lg:top-header lg:grid lg:h-panel lg:grid-cols-[5fr_7fr]">
-        <div className="pb-12 lg:flex lg:flex-col lg:justify-center lg:pr-12 lg:pb-0">
-          <SectionHeading
-            id="features-heading"
-            label="Why Pelago"
-            title="Everything you need, nothing you don't."
-            description="A focused set of tools for following the market: fast, readable and honest about its data."
-          />
-          <p
-            className="mt-8 hidden num text-mono-md text-muted lg:block"
-            aria-hidden="true"
-          >
-            [{String(activeIndex + 1).padStart(2, "0")}] / [
-            {String(FEATURES.length).padStart(2, "0")}]
-          </p>
-        </div>
-
-        <ol className="border-t border-primary lg:flex lg:flex-col lg:justify-center lg:border-t-0 lg:border-l">
-          {FEATURES.map((feature, i) => {
-            const expanded = isDesktop ? scrollActive === i : mobileOpen === i;
-            return (
-              <li
-                key={feature.title}
-                className="border-b border-primary lg:pl-6 first:lg:border-t"
+      {/* The panel centers one row; the row is exactly as tall as the list, so the left box
+          (same top and bottom rules as the list's first and last) is the same height as it. */}
+      <div className="page-container lg:sticky lg:top-header lg:flex lg:h-panel lg:items-center">
+        <div className="lg:grid lg:w-full lg:grid-cols-[5fr_7fr]">
+          {/* lg:pb-0: the mobile gap under the heading would push the text off-center here.
+            The text block is centered in this box; lg:max-w-md is its width (narrower = more air). */}
+          <div className="pb-12 lg:flex lg:flex-col lg:items-center lg:justify-center lg:border-y lg:border-primary lg:px-6 lg:pb-0">
+            <div className="lg:w-full lg:max-w-md">
+              <SectionHeading
+                id="features-heading"
+                label="Why Pelago"
+                title="Everything you need, nothing you don't."
+                description="A focused set of tools for following the market: fast, readable and honest about its data."
+              />
+              <p
+                className="mt-8 hidden num text-mono-md text-muted lg:block"
+                aria-hidden="true"
               >
-                <h3>
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    aria-controls={`feature-panel-${i}`}
-                    onClick={() =>
-                      isDesktop ? goTo(i) : setMobileOpen(expanded ? null : i)
-                    }
-                    className="flex min-h-20 w-full items-center justify-between gap-6 px-2 text-left lg:px-0"
-                  >
-                    <span
-                      className={cn(
-                        "text-heading-md transition-colors duration-250 ease-standard",
-                        expanded ? "text-primary" : "text-muted",
-                      )}
-                    >
-                      {feature.title}
-                    </span>
-                    <RowIndex n={i + 1} />
-                  </button>
-                </h3>
-                <div
-                  id={`feature-panel-${i}`}
-                  role="region"
-                  className={cn(
-                    "grid transition-[grid-template-rows] duration-250 ease-standard",
-                    expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-                  )}
+                [{String(activeIndex + 1).padStart(2, "0")}] / [
+                {String(FEATURES.length).padStart(2, "0")}]
+              </p>
+            </div>
+          </div>
+
+          <ol className="border-t border-primary lg:flex lg:flex-col lg:border-t-0">
+            {FEATURES.map((feature, i) => {
+              const expanded = isDesktop ? scrollActive === i : mobileOpen === i;
+              return (
+                <li
+                  key={feature.title}
+                  className="lg:line-bleed-bottom first:lg:line-bleed-top border-b border-primary lg:border-b-0 lg:pl-6"
                 >
-                  {/* inert while collapsed: hidden content must not be reachable by Tab. */}
-                  <div className="overflow-hidden" inert={!expanded}>
-                    <div className="space-y-6 px-2 pb-8 lg:px-0">
-                      <p className="max-w-xl text-body-xl text-secondary">
-                        {feature.body}
-                      </p>
-                      <Link
-                        href={feature.href}
-                        className={buttonVariants({ size: "md" })}
+                  <h3>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={`feature-panel-${i}`}
+                      onClick={() =>
+                        isDesktop ? goTo(i) : setMobileOpen(expanded ? null : i)
+                      }
+                      // lg: the rows grow with the screen height, so the list fills more of the
+                      // pinned panel (less empty space above and below it). Tune the 13svh.
+                      className="flex min-h-20 w-full items-center justify-between gap-6 px-2 text-left lg:min-h-[clamp(5rem,13svh,9rem)] lg:px-0"
+                    >
+                      <span
+                        className={cn(
+                          "text-heading-md transition-colors duration-250 ease-standard",
+                          expanded ? "text-primary" : "text-muted",
+                        )}
                       >
-                        {feature.cta}
-                      </Link>
+                        {feature.title}
+                      </span>
+                      <RowIndex n={i + 1} />
+                    </button>
+                  </h3>
+                  <div
+                    id={`feature-panel-${i}`}
+                    role="region"
+                    className={cn(
+                      "grid transition-[grid-template-rows] duration-250 ease-standard",
+                      expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                    )}
+                  >
+                    {/* inert while collapsed: hidden content must not be reachable by Tab. */}
+                    <div className="overflow-hidden" inert={!expanded}>
+                      <div className="space-y-6 px-2 pb-8 lg:px-0">
+                        <p className="max-w-xl text-body-xl text-secondary">
+                          {feature.body}
+                        </p>
+                        <Link
+                          href={feature.href}
+                          className={buttonVariants({ size: "md" })}
+                        >
+                          {feature.cta}
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       </div>
     </section>
   );

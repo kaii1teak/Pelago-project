@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { Minus, Plus, RotateCcw } from "lucide-react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -11,8 +12,14 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useChartUrlState } from "@/hooks/use-chart-url-state";
-import { useCoinChart, useCoinOhlc } from "@/lib/api/hooks";
-import { CHART_RANGES, RANGE_NAME, isChartRange, type ChartMode } from "@/lib/chart";
+import { useCoinChartHistory, useCoinOhlc } from "@/lib/api/hooks";
+import {
+  CHART_RANGES,
+  RANGE_NAME,
+  isChartRange,
+  type ChartMode,
+  type ChartScale,
+} from "@/lib/chart";
 import {
   summarizeCandles,
   summarizeLine,
@@ -21,7 +28,7 @@ import {
 } from "@/lib/chart-data";
 import { formatUsd } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { CrosshairInfo } from "./chart-canvas";
+import type { ChartControls, CrosshairInfo } from "./chart-canvas";
 import { ChartLegend } from "./chart-legend";
 
 // The charting library is ~45KB and only this page needs it, so it loads on demand,
@@ -36,6 +43,11 @@ const MODE_OPTIONS = [
   { value: "candle", label: "Candles" },
 ] as const satisfies readonly { value: ChartMode; label: string }[];
 
+const SCALE_OPTIONS = [
+  { value: "price", label: "Price" },
+  { value: "percent", label: "%" },
+] as const satisfies readonly { value: ChartScale; label: string }[];
+
 // Stable references: a new [] each render would re-feed the chart on every update.
 const NO_LINE: readonly LinePoint[] = [];
 const NO_CANDLES: readonly Candle[] = [];
@@ -49,13 +61,75 @@ function SummaryCell({ label, children }: { label: string; children: React.React
   );
 }
 
+/**
+ * One line under the chart: how to go back in time (and what is happening while it
+ * does). It is a live region, so loading and failures are announced too.
+ */
+function ChartHint({
+  mode,
+  loading,
+  error,
+  reachedStart,
+  scrollable,
+}: {
+  mode: ChartMode;
+  loading: boolean;
+  error: { retry: () => unknown } | null;
+  reachedStart: boolean;
+  scrollable: boolean;
+}) {
+  let text = "";
+  if (mode === "candle") {
+    text =
+      "Candles cover the selected range only. Switch to Line to scroll further back.";
+  } else if (error) {
+    text = "Couldn't load earlier data.";
+  } else if (loading) {
+    text = "Loading earlier data…";
+  } else if (reachedStart) {
+    text = "That is the earliest data available.";
+  } else if (scrollable) {
+    text = "Drag the chart to go back in time. Ctrl + scroll or the buttons zoom.";
+  } else {
+    text = "Ctrl + scroll or the buttons zoom. The 1Y chart already holds the full year.";
+  }
+
+  return (
+    <p
+      role="status"
+      className="mt-3 flex min-h-6 flex-wrap items-center gap-x-3 num text-mono-sm text-muted"
+    >
+      {text}
+      {error && (
+        <Button variant="ghost" size="sm" onClick={() => void error.retry()}>
+          Try again
+        </Button>
+      )}
+    </p>
+  );
+}
+
 export function PriceChart({ id, name }: { id: string; name: string }) {
-  const { range, mode, setRange, setMode } = useChartUrlState();
-  const line = useCoinChart(id, range);
+  const { range, mode, scale, setRange, setMode, setScale } = useChartUrlState();
+  // The line chart can be scrolled back through time: `history` holds the timeframe's own
+  // window plus every older stretch loaded since. Candles have no older data to offer.
+  const history = useCoinChartHistory(id, range, mode === "line");
+  const line = history.base;
   const ohlc = useCoinOhlc(id, range, mode === "candle");
   const [hover, setHover] = useState<CrosshairInfo | null>(null);
+  const controls = useRef<ChartControls | null>(null);
+  const [resetKey, setResetKey] = useState(0);
+
+  /** Back to the latest window of the timeframe, dropping any older history. */
+  const showLatest = () => {
+    history.reset();
+    setResetKey((k) => k + 1);
+  };
 
   const query = mode === "line" ? line : ohlc;
+  // What is on the chart (all loaded history) vs. what the timeframe's numbers describe
+  // (its own window: scrolling back must not change "7D change").
+  const allLine = history.data ?? NO_LINE;
   const lineData = line.data ?? NO_LINE;
   const candleData = ohlc.data ?? NO_CANDLES;
   const series = mode === "line" ? lineData : candleData;
@@ -121,10 +195,15 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
         <ChartLegend info={hover ?? lastPoint} mode={mode} range={range} />
         <ChartCanvas
           mode={mode}
-          line={lineData}
+          line={allLine}
           candles={candleData}
           range={range}
           onCrosshair={setHover}
+          scale={scale}
+          hasMore={history.hasMore}
+          onNearStart={history.loadOlder}
+          resetKey={resetKey}
+          controlsRef={controls}
         />
       </div>
     );
@@ -144,23 +223,72 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
           <TabsList aria-label="Time range" className="border-b-0">
             {CHART_RANGES.map((r) => (
-              <TabsTrigger key={r} value={r} className="num">
+              <TabsTrigger
+                key={r}
+                value={r}
+                className="num"
+                // Radix only reports a CHANGE of tab; pressing the one that is already
+                // selected means "show me the latest again" (after scrolling back in time).
+                onClick={() => {
+                  if (r === range) showLatest();
+                }}
+              >
                 {r.toUpperCase()}
               </TabsTrigger>
             ))}
           </TabsList>
-          <SegmentedControl
-            label="Chart type"
-            value={mode}
-            onValueChange={setMode}
-            options={MODE_OPTIONS}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            {mode === "line" && (
+              <SegmentedControl
+                label="Price axis"
+                value={scale}
+                onValueChange={setScale}
+                options={SCALE_OPTIONS}
+              />
+            )}
+            <SegmentedControl
+              label="Chart type"
+              value={mode}
+              onValueChange={setMode}
+              options={MODE_OPTIONS}
+            />
+            <div role="group" aria-label="Zoom" className="flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Zoom out"
+                onClick={() => controls.current?.zoomOut()}
+              >
+                <Minus aria-hidden="true" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Zoom in"
+                onClick={() => controls.current?.zoomIn()}
+              >
+                <Plus aria-hidden="true" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={showLatest}>
+                <RotateCcw aria-hidden="true" />
+                Latest
+              </Button>
+            </div>
+          </div>
         </div>
 
         <TabsContent value={range} forceMount className="mt-0 border-t border-primary">
           {panel}
         </TabsContent>
       </Tabs>
+
+      <ChartHint
+        mode={mode}
+        loading={history.loadingOlder}
+        error={history.olderError}
+        reachedStart={history.reachedStart}
+        scrollable={mode === "line" && range !== "1y"}
+      />
 
       {summary && (
         <div

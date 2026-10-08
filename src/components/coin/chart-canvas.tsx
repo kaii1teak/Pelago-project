@@ -3,6 +3,8 @@
 import {
   CandlestickSeries,
   LineSeries,
+  LineStyle,
+  PriceScaleMode,
   createChart,
   type BarData,
   type IChartApi,
@@ -15,7 +17,13 @@ import {
 import { useEffect, useRef } from "react";
 import type { Candle, LinePoint } from "@/lib/chart-data";
 import { priceMinMove } from "@/lib/chart-data";
-import type { ChartMode, ChartRange } from "@/lib/chart";
+import {
+  CHART_DAYS,
+  type ChartMode,
+  type ChartRange,
+  type ChartScale,
+} from "@/lib/chart";
+import { ZOOM_STEP, isNearStart, zoomLogicalRange } from "@/lib/chart-zoom";
 import { formatUsd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { chartOptions } from "./chart-options";
@@ -30,6 +38,9 @@ export type CrosshairInfo = {
   low?: number;
   close?: number;
 };
+
+/** What the page can ask the chart to do (the zoom buttons). */
+export type ChartControls = { zoomIn: () => void; zoomOut: () => void };
 
 const asTime = (seconds: number) => seconds as UTCTimestamp;
 
@@ -46,19 +57,29 @@ const lineOptions = (theme: ChartTheme) => ({
   crosshairMarkerRadius: 4,
   crosshairMarkerBorderColor: theme.background,
   crosshairMarkerBackgroundColor: theme.text,
+  // The 0% line of the percent axis: the library's default is its own gray-blue.
+  baseLineColor: theme.gridStrong,
+  baseLineStyle: LineStyle.Dotted,
 });
 
+// A light and a dark body (see --candle-* in globals.css), outlined so either one
+// reads on both themes. Direction is told by lightness, not by red/green.
 const candleOptions = (theme: ChartTheme) => ({
-  upColor: theme.up,
-  downColor: theme.down,
-  wickUpColor: theme.up,
-  wickDownColor: theme.down,
-  borderVisible: false,
+  upColor: theme.candleUp,
+  downColor: theme.candleDown,
+  borderUpColor: theme.candleUpLine,
+  borderDownColor: theme.candleDownLine,
+  wickUpColor: theme.candleUpLine,
+  wickDownColor: theme.candleDownLine,
+  borderVisible: true,
   lastValueVisible: false,
   priceLineVisible: false,
 });
 
 type AnySeries = ISeriesApi<"Line"> | ISeriesApi<"Candlestick">;
+
+/** Mouse-wheel notches are noisy: no single event may zoom by more than this. */
+const WHEEL_ZOOM = { min: 0.8, max: 1.25 };
 
 export default function ChartCanvas({
   mode,
@@ -67,6 +88,11 @@ export default function ChartCanvas({
   range,
   onCrosshair,
   className,
+  scale = "price",
+  hasMore = false,
+  onNearStart,
+  resetKey = 0,
+  controlsRef,
 }: {
   mode: ChartMode;
   line: readonly LinePoint[];
@@ -74,16 +100,28 @@ export default function ChartCanvas({
   range: ChartRange;
   onCrosshair: (info: CrosshairInfo | null) => void;
   className?: string;
+  scale?: ChartScale;
+  /** More history exists before the first bar: scrolling may go past it, and `onNearStart` fires. */
+  hasMore?: boolean;
+  /** The user has scrolled to (almost) the start of what is loaded: fetch older data. */
+  onNearStart?: () => void;
+  /** Bump to jump back to the latest window of the timeframe. */
+  resetKey?: number;
+  controlsRef?: React.RefObject<ChartControls | null>;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<AnySeries | null>(null);
   const seriesModeRef = useRef<ChartMode | null>(null);
+  /** What the series currently holds, to tell "older data was added" from "a new chart". */
+  const loaded = useRef<{ first: number; key: string } | null>(null);
+  /** The user has dragged, zoomed or scrolled: only then may reaching the start load more. */
+  const interacted = useRef(false);
 
   // Latest props for callbacks created once (the chart's own event handlers).
-  const latest = useRef({ mode, range, onCrosshair });
+  const latest = useRef({ mode, range, onCrosshair, hasMore, onNearStart, line });
   useEffect(() => {
-    latest.current = { mode, range, onCrosshair };
+    latest.current = { mode, range, onCrosshair, hasMore, onNearStart, line };
   });
 
   // 1. Create the chart once; tear it down on unmount.
@@ -92,7 +130,7 @@ export default function ChartCanvas({
     if (!host) return;
     const chart = createChart(
       host,
-      chartOptions(readChartTheme(host), latest.current.range),
+      chartOptions(readChartTheme(host), latest.current.range, !latest.current.hasMore),
     );
     chartRef.current = chart;
 
@@ -117,10 +155,64 @@ export default function ChartCanvas({
     };
     chart.subscribeCrosshairMove(onMove);
 
+    // Scrolling back in time: once the view nears the first bar, ask for older data.
+    const onRange = (visible: { from: number; to: number } | null) => {
+      if (!visible || !interacted.current || !latest.current.hasMore) return;
+      if (isNearStart(visible)) latest.current.onNearStart?.();
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(onRange);
+
+    const zoomBy = (factor: number, anchor = 0.5) => {
+      const view = chart.timeScale().getVisibleLogicalRange();
+      if (!view) return;
+      interacted.current = true;
+      chart.timeScale().setVisibleLogicalRange(zoomLogicalRange(view, factor, anchor));
+    };
+    if (controlsRef) {
+      controlsRef.current = {
+        zoomIn: () => zoomBy(ZOOM_STEP),
+        zoomOut: () => zoomBy(1 / ZOOM_STEP),
+      };
+    }
+
+    // Any touch of the chart counts: from then on, reaching the start loads more.
+    const markInteracted = () => {
+      interacted.current = true;
+    };
+    host.addEventListener("pointerdown", markInteracted);
+
+    // The page scrolls, so the wheel is the page's: vertical scrolling over the chart
+    // moves the page. Two gestures are the chart's: Ctrl/Cmd + wheel (and a trackpad
+    // pinch, which browsers send as ctrl+wheel) zooms; a sideways swipe pans.
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        const box = host.getBoundingClientRect();
+        const anchor =
+          box.width > 0
+            ? Math.min(1, Math.max(0, (event.clientX - box.left) / box.width))
+            : 0.5;
+        const factor = Math.exp(event.deltaY * 0.01);
+        zoomBy(Math.min(WHEEL_ZOOM.max, Math.max(WHEEL_ZOOM.min, factor)), anchor);
+      } else if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+        event.preventDefault();
+        interacted.current = true;
+        const timeScale = chart.timeScale();
+        const spacing = timeScale.options().barSpacing;
+        timeScale.scrollToPosition(
+          timeScale.scrollPosition() - event.deltaX / spacing,
+          false,
+        );
+      }
+    };
+    host.addEventListener("wheel", onWheel, { passive: false });
+
     // Canvas colors can't follow CSS, so re-resolve the tokens when the theme flips.
     const themeObserver = new MutationObserver(() => {
       const theme = readChartTheme(host);
-      chart.applyOptions(chartOptions(theme, latest.current.range));
+      chart.applyOptions(
+        chartOptions(theme, latest.current.range, !latest.current.hasMore),
+      );
       seriesRef.current?.applyOptions(
         latest.current.mode === "line" ? lineOptions(theme) : candleOptions(theme),
       );
@@ -132,12 +224,19 @@ export default function ChartCanvas({
 
     return () => {
       themeObserver.disconnect();
+      host.removeEventListener("pointerdown", markInteracted);
+      host.removeEventListener("wheel", onWheel);
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(onRange);
       chart.unsubscribeCrosshairMove(onMove);
+      if (controlsRef) controlsRef.current = null;
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
       seriesModeRef.current = null;
+      loaded.current = null;
     };
+    // controlsRef is a stable ref object from the parent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 2. Series type + data.
@@ -154,6 +253,7 @@ export default function ChartCanvas({
           ? chart.addSeries(LineSeries, lineOptions(theme))
           : chart.addSeries(CandlestickSeries, candleOptions(theme));
       seriesModeRef.current = mode;
+      loaded.current = null;
       latest.current.onCrosshair(null);
     }
     const series = seriesRef.current;
@@ -167,6 +267,18 @@ export default function ChartCanvas({
         formatter: (price: number) => formatUsd(price),
       },
     });
+
+    const bars = mode === "line" ? line : candles;
+    const first = bars[0]?.time;
+    const last = bars.at(-1)?.time;
+    // A new chart (other timeframe, a reset, or another series type) starts at the
+    // latest window. Older data being ADDED must instead leave the view where it is,
+    // and a live refresh of the same data must not disturb a view the user moved.
+    const key = `${mode}:${range}:${resetKey}`;
+    const before = loaded.current;
+    const prepended = before?.key === key && first !== undefined && first < before.first;
+    const refreshed = before?.key === key && !prepended;
+    const view = prepended ? chart.timeScale().getVisibleRange() : null;
 
     if (mode === "line") {
       (series as ISeriesApi<"Line">).setData(
@@ -183,15 +295,46 @@ export default function ChartCanvas({
         })),
       );
     }
-    chart.timeScale().fitContent();
-  }, [mode, line, candles]);
 
-  // 3. Time formatting follows the range.
+    if (prepended && view) {
+      chart.timeScale().setVisibleRange(view);
+    } else if (!refreshed) {
+      interacted.current = false;
+      const window = CHART_DAYS[range] * 86_400;
+      if (
+        mode === "line" &&
+        first !== undefined &&
+        last !== undefined &&
+        last - first > window * 1.02
+      ) {
+        // Older history is loaded too: show just the timeframe's latest window.
+        chart
+          .timeScale()
+          .setVisibleRange({ from: asTime(last - window), to: asTime(last) });
+      } else {
+        chart.timeScale().fitContent();
+      }
+    }
+    if (first !== undefined) loaded.current = { first, key };
+  }, [mode, line, candles, range, resetKey]);
+
+  // 3. Time formatting follows the range; the left edge is free while there is more history.
   useEffect(() => {
     const chart = chartRef.current;
     const host = hostRef.current;
-    if (chart && host) chart.applyOptions(chartOptions(readChartTheme(host), range));
-  }, [range]);
+    if (chart && host)
+      chart.applyOptions(chartOptions(readChartTheme(host), range, !hasMore));
+  }, [range, hasMore]);
+
+  // 4. Price axis in dollars, or as percent change from the first bar on screen.
+  useEffect(() => {
+    chartRef.current?.priceScale("right").applyOptions({
+      mode:
+        scale === "percent" && mode === "line"
+          ? PriceScaleMode.Percentage
+          : PriceScaleMode.Normal,
+    });
+  }, [scale, mode]);
 
   return <div ref={hostRef} className={cn("size-full", className)} />;
 }

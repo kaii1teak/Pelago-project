@@ -7,7 +7,7 @@ import { SectionLabel } from "@/components/ui/section-label";
 export function CtaSection() {
   return (
     <Reveal>
-      <section aria-labelledby="cta-heading" className="border-t border-primary">
+      <section aria-labelledby="cta-heading" className="border-t-transparent border-primary mt-0">
         <div className="page-container flex flex-col gap-10 pt-12 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl space-y-4">
             <SectionLabel>Get started</SectionLabel>

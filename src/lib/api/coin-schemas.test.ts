@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { coinFixture, ohlcFixture, priceChartFixture } from "@/test/fixtures";
 import { ApiError } from "./errors";
-import { parseChartRange, parseCoinId } from "./parse-coin";
+import { parseChartBack, parseChartRange, parseCoinId } from "./parse-coin";
 import { coinDetailSchema, ohlcSchema, priceChartSchema } from "./schemas";
 
 describe("coinDetailSchema", () => {
@@ -162,5 +162,30 @@ describe("request parsing", () => {
     expect(() => parseChartRange(new URLSearchParams("range=10y"))).toThrowError(
       expect.objectContaining({ code: "bad_request" }),
     );
+  });
+});
+
+describe("parseChartBack", () => {
+  const parse = (q: string, range: "24h" | "7d" | "30d" | "1y" = "7d") =>
+    parseChartBack(new URLSearchParams(q), range);
+
+  it("is 0, the chart's own window, when absent", () => {
+    expect(parse("")).toBe(0);
+    expect(parse("range=7d")).toBe(0);
+  });
+
+  it("reads a whole step", () => {
+    expect(parse("back=3")).toBe(3);
+  });
+
+  it.each(["0", "-1", "1.5", "abc", "", "1e3", "01x", " 2", "9999", "99"])(
+    "rejects %j as a bad request",
+    (value) => {
+      expect(() => parse(`back=${value}`)).toThrow(ApiError);
+    },
+  );
+
+  it("rejects any step for 1y", () => {
+    expect(() => parse("back=1", "1y")).toThrow(ApiError);
   });
 });

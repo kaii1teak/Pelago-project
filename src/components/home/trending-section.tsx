@@ -37,11 +37,16 @@ function TrendingRow({ coin, index }: { coin: TrendingCoin; index: number }) {
         <span className="hidden num text-mono-md text-muted sm:block">
           {coin.rank != null ? `#${coin.rank}` : ""}
         </span>
-        <span className="text-right">
-          <Price value={coin.price} className="text-mono-md text-primary" />
-        </span>
-        <span className="flex justify-end">
-          <PercentChange value={coin.change24h} className="text-mono-sm" />
+        {/* Phones have room for ONE column here: price over change. From `sm` the wrapper
+            disappears (display: contents) and each is its own grid column. Without it
+            the 4th item wrapped onto a second row and spilled out of the left edge. */}
+        <span className="flex flex-col items-end gap-1 sm:contents">
+          <span className="text-right">
+            <Price value={coin.price} className="text-mono-md text-primary" />
+          </span>
+          <span className="flex justify-end">
+            <PercentChange value={coin.change24h} className="text-mono-sm" />
+          </span>
         </span>
       </Link>
     </li>
@@ -62,8 +67,10 @@ function TrendingSkeleton() {
             </div>
           </div>
           <Skeleton className="hidden h-4 w-10 sm:block" />
-          <Skeleton className="ml-auto h-4 w-20" />
-          <Skeleton className="ml-auto h-5 w-16" />
+          <div className="flex flex-col items-end gap-1 sm:contents">
+            <Skeleton className="ml-auto h-4 w-20" />
+            <Skeleton className="ml-auto h-5 w-16" />
+          </div>
         </div>
       ))}
     </div>

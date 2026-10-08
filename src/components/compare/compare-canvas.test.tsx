@@ -65,12 +65,13 @@ vi.mock("lightweight-charts", () => ({
   ColorType: { Solid: "solid" },
   CrosshairMode: { Normal: 0 },
   LineStyle: { Dashed: 2, Dotted: 1 },
+  PriceScaleMode: { Normal: 0, Logarithmic: 1, Percentage: 2 },
   TickMarkType: { Year: 0, Month: 1, DayOfMonth: 2, Time: 3, TimeWithSeconds: 4 },
 }));
 
 // jsdom has no stylesheet, so resolve tokens from a controllable theme instead.
 const theme = vi.hoisted(() => ({
-  colors: ["C0", "C1", "C2", "C3"],
+  colors: Array.from({ length: 10 }, (_, i) => `C${i}`),
 }));
 vi.mock("@/components/coin/chart-theme", () => ({
   readChartTheme: () => ({
@@ -81,8 +82,6 @@ vi.mock("@/components/coin/chart-theme", () => ({
     gridStrong: "GRIDSTRONG",
     inverse: "INVERSE",
     inverseText: "INVERSETEXT",
-    up: "UP",
-    down: "DOWN",
     fontFamily: "MONO",
   }),
   readSeriesColors: () => [...theme.colors],
@@ -92,17 +91,32 @@ const points = [
   { time: 100, value: 0 },
   { time: 200, value: 5 },
 ];
-const btc: CompareSeries = { id: "bitcoin", slot: 0, points };
-const eth: CompareSeries = { id: "ethereum", slot: 1, points };
-const sol: CompareSeries = { id: "solana", slot: 2, points };
+const btc: CompareSeries = { id: "bitcoin", color: 0, points };
+const eth: CompareSeries = { id: "ethereum", color: 7, points };
+const sol: CompareSeries = { id: "solana", color: 3, points };
 
-function setup(initial: CompareSeries[], range: "7d" | "1y" = "7d") {
+function setup(
+  initial: CompareSeries[],
+  range: "7d" | "1y" = "7d",
+  chartView: "change" | "price" = "change",
+) {
   const onCrosshair = vi.fn<(info: CompareCrosshair | null) => void>();
   const view = render(
-    <CompareCanvas series={initial} range={range} onCrosshair={onCrosshair} />,
+    <CompareCanvas
+      series={initial}
+      range={range}
+      view={chartView}
+      onCrosshair={onCrosshair}
+    />,
   );
-  const rerender = (next: CompareSeries[], r: "7d" | "1y" = range) =>
-    view.rerender(<CompareCanvas series={next} range={r} onCrosshair={onCrosshair} />);
+  const rerender = (
+    next: CompareSeries[],
+    r: "7d" | "1y" = range,
+    v: "change" | "price" = chartView,
+  ) =>
+    view.rerender(
+      <CompareCanvas series={next} range={r} view={v} onCrosshair={onCrosshair} />,
+    );
   return { ...view, rerender, onCrosshair };
 }
 
@@ -110,7 +124,7 @@ beforeEach(() => {
   lib.state.series = [];
   lib.state.handlers = [];
   lib.state.createChart.mockClear();
-  theme.colors = ["C0", "C1", "C2", "C3"];
+  theme.colors = Array.from({ length: 10 }, (_, i) => `C${i}`);
   document.documentElement.classList.remove("dark");
 });
 
@@ -151,9 +165,9 @@ describe("CompareCanvas: setup", () => {
 });
 
 describe("CompareCanvas: lines", () => {
-  it("draws one line per asset, each in its slot's color, with its data", () => {
+  it("draws one line per asset, each in its own color, with its data", () => {
     setup([btc, eth, sol]);
-    expect(lib.state.series.map((s) => s.options.color)).toEqual(["C0", "C1", "C2"]);
+    expect(lib.state.series.map((s) => s.options.color)).toEqual(["C0", "C7", "C3"]);
     expect(lib.state.series[0]!.setData).toHaveBeenCalledWith([
       { time: 100, value: 0 },
       { time: 200, value: 5 },
@@ -185,12 +199,12 @@ describe("CompareCanvas: lines", () => {
     expect(lib.state.series).toHaveLength(3); // nothing re-added
   });
 
-  it("recolors a line whose slot changed instead of recreating it", () => {
+  it("recolors a line whose color changed instead of recreating it", () => {
     const { rerender } = setup([btc, eth]);
     const ethApi = lib.state.series[1]!;
-    rerender([{ ...eth, slot: 0 }]);
+    rerender([{ ...eth, color: 5 }]);
     expect(ethApi.applyOptions).toHaveBeenCalledWith(
-      expect.objectContaining({ color: "C0" }),
+      expect.objectContaining({ color: "C5" }),
     );
     expect(lib.state.series).toHaveLength(2);
   });
@@ -262,7 +276,7 @@ describe("CompareCanvas: crosshair", () => {
 describe("CompareCanvas: theme and range", () => {
   it("re-resolves the line colors when the theme flips, without rebuilding", async () => {
     setup([btc, eth]);
-    theme.colors = ["N0", "N1", "N2", "N3"];
+    theme.colors = Array.from({ length: 10 }, (_, i) => `N${i}`);
     await act(async () => {
       document.documentElement.classList.add("dark");
       await Promise.resolve();
@@ -271,7 +285,7 @@ describe("CompareCanvas: theme and range", () => {
       expect.objectContaining({ color: "N0" }),
     );
     expect(lib.state.series[1]!.applyOptions).toHaveBeenCalledWith(
-      expect.objectContaining({ color: "N1" }),
+      expect.objectContaining({ color: "N7" }),
     );
     expect(lib.state.series[0]!.line!.applyOptions).toHaveBeenCalled();
     expect(lib.state.createChart).toHaveBeenCalledTimes(1);
@@ -287,5 +301,64 @@ describe("CompareCanvas: theme and range", () => {
     } & Options;
     expect(options.timeScale.timeVisible).toBe(false); // daily data: no time of day
     expect(options.localization.priceFormatter(1)).toBe("+1.0%");
+  });
+});
+
+describe("CompareCanvas: price view", () => {
+  type AxisOptions = {
+    rightPriceScale: { mode: number };
+    localization: { priceFormatter: (v: number) => string };
+  };
+
+  it("plots prices on a logarithmic axis in dollars", () => {
+    setup([btc, eth], "7d", "price");
+    const options = lib.state.createChart.mock.calls[0]![1] as AxisOptions;
+    expect(options.rightPriceScale.mode).toBe(1);
+    expect(options.localization.priceFormatter(83753.1)).toBe("$83,753.10");
+  });
+
+  it("shows each value as dollars in the crosshair label", () => {
+    setup([btc], "7d", "price");
+    const format = (
+      lib.state.series[0]!.options.priceFormat as { formatter: (v: number) => string }
+    ).formatter;
+    expect(format(0.00001234)).toMatch(/^\$0\.0000123/);
+  });
+
+  it("has no 0% reference line: it means nothing for prices", () => {
+    setup([btc, eth], "7d", "price");
+    expect(lib.state.series[0]!.createPriceLine).not.toHaveBeenCalled();
+  });
+
+  it("keeps the percent view on a normal axis with the 0% line", () => {
+    setup([btc, eth], "7d", "change");
+    const options = lib.state.createChart.mock.calls[0]![1] as AxisOptions;
+    expect(options.rightPriceScale.mode).toBe(0);
+    expect(lib.state.series[0]!.createPriceLine).toHaveBeenCalledTimes(1);
+  });
+
+  it("switches between the views without rebuilding the chart", () => {
+    const { rerender } = setup([btc, eth], "7d", "change");
+    lib.state.chart!.applyOptions.mockClear();
+    rerender([btc, eth], "7d", "price");
+    expect(lib.state.createChart).toHaveBeenCalledTimes(1);
+    const options = lib.state.chart!.applyOptions.mock.calls.at(-1)![0] as AxisOptions;
+    expect(options.rightPriceScale.mode).toBe(1);
+    // Each line's own label format follows too.
+    const format = (
+      lib.state.series[0]!.applyOptions.mock.calls.at(-1)![0] as {
+        priceFormat: { formatter: (v: number) => string };
+      }
+    ).priceFormat.formatter;
+    expect(format(1234.5)).toBe("$1,234.50");
+  });
+
+  it("drops the 0% line when switching to prices, and brings it back", () => {
+    const { rerender } = setup([btc, eth], "7d", "change");
+    const first = lib.state.series[0]!;
+    rerender([btc, eth], "7d", "price");
+    expect(first.removePriceLine).toHaveBeenCalledTimes(1);
+    rerender([btc, eth], "7d", "change");
+    expect(first.createPriceLine).toHaveBeenCalledTimes(2);
   });
 });

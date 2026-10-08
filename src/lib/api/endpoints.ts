@@ -1,13 +1,14 @@
 import "server-only";
 import { cgFetch } from "./coingecko";
 import type { MarketsParams } from "./markets-query";
-import { CHART_DAYS, type ChartRange } from "@/lib/chart";
+import { CHART_DAYS, historyWindow, type ChartRange } from "@/lib/chart";
 import {
   coinDetailSchema,
   globalStatsSchema,
   marketsSchema,
   ohlcSchema,
   priceChartSchema,
+  searchSchema,
   trendingSchema,
 } from "./schemas";
 
@@ -21,6 +22,7 @@ export const REVALIDATE = {
   markets: 60,
   trending: 300,
   coin: 120,
+  search: 300,
 } as const;
 
 /** Used by both route handlers (for the browser) and server components (for first paint). */
@@ -66,6 +68,15 @@ export function getTrending() {
   });
 }
 
+/** `query` must already be normalized (see parseSearchQuery): it is the cache key. */
+export function getSearch(query: string) {
+  return cgFetch("/search", searchSchema, {
+    params: { query },
+    revalidate: REVALIDATE.search,
+    tags: ["search"],
+  });
+}
+
 /** Chart history changes slowly, so longer ranges are cached longer. */
 export const CHART_REVALIDATE: Record<ChartRange, number> = {
   "24h": 120,
@@ -90,10 +101,27 @@ export function getCoin(id: string) {
   });
 }
 
-export function getCoinChart(id: string, range: ChartRange) {
-  return cgFetch(`/coins/${encodeURIComponent(id)}/market_chart`, priceChartSchema, {
-    params: { vs_currency: "usd", days: CHART_DAYS[range] },
-    revalidate: CHART_REVALIDATE[range],
+/** Older stretches of history never change, so they are cached much longer than the live window. */
+export const HISTORY_REVALIDATE = 3600;
+
+/**
+ * The chart's own window (`back` = 0), or, for `back` = 1, 2, ..., the stretch just
+ * before it, then before that: what scrolling the chart backwards loads. Both come
+ * back in the same shape, so the client can simply join them.
+ */
+export function getCoinChart(id: string, range: ChartRange, back = 0) {
+  const path = `/coins/${encodeURIComponent(id)}`;
+  if (back === 0) {
+    return cgFetch(`${path}/market_chart`, priceChartSchema, {
+      params: { vs_currency: "usd", days: CHART_DAYS[range] },
+      revalidate: CHART_REVALIDATE[range],
+      tags: ["coin-chart"],
+    });
+  }
+  const { from, to } = historyWindow(range, back, Date.now() / 1000);
+  return cgFetch(`${path}/market_chart/range`, priceChartSchema, {
+    params: { vs_currency: "usd", from, to },
+    revalidate: HISTORY_REVALIDATE,
     tags: ["coin-chart"],
   });
 }

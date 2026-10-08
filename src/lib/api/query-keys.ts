@@ -9,8 +9,13 @@ import { normalizeMarketsParams, type MarketsParams } from "./markets-query";
 export const queryKeys = {
   global: ["global"] as const,
   trending: ["trending"] as const,
+  search: (query: string) => ["search", query] as const,
   coin: (id: string) => ["coin", id] as const,
-  coinChart: (id: string, range: ChartRange) => ["coin", id, "chart", range] as const,
+  // `back` (1, 2, ...) is the stretch of history before the chart's own window.
+  coinChart: (id: string, range: ChartRange, back = 0) =>
+    (back === 0
+      ? ["coin", id, "chart", range]
+      : ["coin", id, "chart", range, back]) as readonly unknown[],
   coinOhlc: (id: string, range: ChartRange) => ["coin", id, "ohlc", range] as const,
   // Normalized, so ids in a different order still hit the same cache entry.
   markets: (params?: MarketsParams) =>

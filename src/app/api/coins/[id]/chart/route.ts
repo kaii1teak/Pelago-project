@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
-import { CHART_REVALIDATE, getCoinChart } from "@/lib/api/endpoints";
+import { CHART_REVALIDATE, HISTORY_REVALIDATE, getCoinChart } from "@/lib/api/endpoints";
 import { errorResponse, jsonResponse } from "@/lib/api/http";
-import { parseChartRange, parseCoinId } from "@/lib/api/parse-coin";
+import { parseChartBack, parseChartRange, parseCoinId } from "@/lib/api/parse-coin";
 
 export async function GET(
   request: NextRequest,
@@ -10,8 +10,12 @@ export async function GET(
   try {
     const id = parseCoinId((await ctx.params).id);
     const range = parseChartRange(request.nextUrl.searchParams);
-    const { data, stale } = await getCoinChart(id, range);
-    return jsonResponse(data, { sMaxAge: CHART_REVALIDATE[range], stale });
+    const back = parseChartBack(request.nextUrl.searchParams, range);
+    const { data, stale } = await getCoinChart(id, range, back);
+    return jsonResponse(data, {
+      sMaxAge: back === 0 ? CHART_REVALIDATE[range] : HISTORY_REVALIDATE,
+      stale,
+    });
   } catch (error) {
     return errorResponse(error);
   }

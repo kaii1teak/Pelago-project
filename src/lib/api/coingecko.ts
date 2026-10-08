@@ -21,7 +21,22 @@ export type CgResult<T> = {
  * serverless, but costs nothing and covers dev/self-hosted runs fully.
  */
 const LAST_GOOD_MAX_AGE_MS = 30 * 60 * 1000;
+/**
+ * Capped, oldest out first. Most keys are a small fixed set (coins, ranges,
+ * categories), but search queries are free text: without a cap, every distinct
+ * query anyone types would stay in memory for the life of the instance.
+ */
+export const LAST_GOOD_MAX_ENTRIES = 300;
 const lastGood = new Map<string, { data: unknown; at: number }>();
+
+function rememberGood(key: string, data: unknown) {
+  lastGood.delete(key); // re-inserting moves it to the "newest" end
+  if (lastGood.size >= LAST_GOOD_MAX_ENTRIES) {
+    const oldest = lastGood.keys().next().value;
+    if (oldest !== undefined) lastGood.delete(oldest);
+  }
+  lastGood.set(key, { data, at: Date.now() });
+}
 
 /**
  * Remembers URLs the upstream said don't exist. Next doesn't cache 404s, and the
@@ -145,7 +160,7 @@ export async function cgFetch<S extends z.ZodType>(
     return fallback(new ApiError("invalid_response"));
   }
 
-  lastGood.set(key, { data: parsed.data, at: Date.now() });
+  rememberGood(key, parsed.data);
   return { data: parsed.data, stale: false };
 }
 

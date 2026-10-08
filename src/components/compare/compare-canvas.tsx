@@ -3,6 +3,7 @@
 import {
   LineSeries,
   LineStyle,
+  PriceScaleMode,
   createChart,
   type IChartApi,
   type IPriceLine,
@@ -21,26 +22,27 @@ import {
 } from "@/components/coin/chart-theme";
 import type { ChartRange } from "@/lib/chart";
 import type { LinePoint } from "@/lib/chart-data";
-import { formatPercent } from "@/lib/format";
+import type { CompareView } from "@/lib/compare";
+import { formatPercent, formatUsd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-/** One line on the chart: percent change since the shared start. */
+/** One line on the chart: percent change since the shared start, or the price (see `view`). */
 export type CompareSeries = {
   id: string;
-  /** Which palette color it takes (see COMPARE_COLOR_TOKENS). */
-  slot: number;
+  /** Its line color: an index into COMPARE_PALETTE. */
+  color: number;
   points: readonly LinePoint[];
 };
 
-/** What's under the crosshair: the time, and each asset's percent change there. */
+/** What's under the crosshair: the time, and each asset's value there (percent or price). */
 export type CompareCrosshair = { time: number; values: Record<string, number> };
 
 const asTime = (seconds: number) => seconds as UTCTimestamp;
 const isLineData = (d: object): d is LineData<Time> => "value" in d;
 
-type Entry = { api: ISeriesApi<"Line">; slot: number };
+type Entry = { api: ISeriesApi<"Line">; color: number };
 
-const seriesOptions = (theme: ChartTheme, color: string) => ({
+const seriesOptions = (theme: ChartTheme, color: string, view: CompareView) => ({
   color,
   lineWidth: 2 as const,
   lastValueVisible: false,
@@ -50,19 +52,31 @@ const seriesOptions = (theme: ChartTheme, color: string) => ({
   crosshairMarkerBorderColor: theme.background,
   priceFormat: {
     type: "custom" as const,
-    minMove: 0.01,
-    formatter: (value: number) => formatPercent(value),
+    // Prices span cents to tens of thousands of dollars: no single step suits them all.
+    minMove: view === "price" ? 1e-8 : 0.01,
+    formatter: (value: number) =>
+      view === "price" ? formatUsd(value) : formatPercent(value),
   },
 });
 
-/** The shared options, with the price axis and crosshair label in percent, not dollars. */
-const compareOptions = (theme: ChartTheme, range: ChartRange) => {
+/**
+ * The shared options, with the axis in percent or in dollars. Prices go on a
+ * LOGARITHMIC axis: coins that cost $80,000 and $0.10 could not share a linear one,
+ * and on a log axis an equal percentage move is an equal distance, which is what
+ * a comparison is for.
+ */
+const compareOptions = (theme: ChartTheme, range: ChartRange, view: CompareView) => {
   const base = chartOptions(theme, range);
   return {
     ...base,
+    rightPriceScale: {
+      ...base.rightPriceScale,
+      mode: view === "price" ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
+    },
     localization: {
       ...base.localization,
-      priceFormatter: (value: number) => formatPercent(value, 1),
+      priceFormatter: (value: number) =>
+        view === "price" ? formatUsd(value) : formatPercent(value, 1),
     },
   };
 };
@@ -79,11 +93,13 @@ const baselineOptions = (theme: ChartTheme) => ({
 export default function CompareCanvas({
   series,
   range,
+  view = "change",
   onCrosshair,
   className,
 }: {
   series: readonly CompareSeries[];
   range: ChartRange;
+  view?: CompareView;
   onCrosshair: (info: CompareCrosshair | null) => void;
   className?: string;
 }) {
@@ -91,11 +107,12 @@ export default function CompareCanvas({
   const chartRef = useRef<IChartApi | null>(null);
   const entries = useRef(new Map<string, Entry>());
   const baseline = useRef<{ api: ISeriesApi<"Line">; line: IPriceLine } | null>(null);
+  const shownView = useRef(view);
 
   // Latest props for callbacks created once (the chart's own event handlers).
-  const latest = useRef({ range, onCrosshair });
+  const latest = useRef({ range, view, onCrosshair });
   useEffect(() => {
-    latest.current = { range, onCrosshair };
+    latest.current = { range, view, onCrosshair };
   });
 
   // 1. Create the chart once; tear it down on unmount.
@@ -104,7 +121,7 @@ export default function CompareCanvas({
     if (!host) return;
     const chart = createChart(
       host,
-      compareOptions(readChartTheme(host), latest.current.range),
+      compareOptions(readChartTheme(host), latest.current.range, latest.current.view),
     );
     chartRef.current = chart;
     const map = entries.current;
@@ -127,9 +144,10 @@ export default function CompareCanvas({
     const themeObserver = new MutationObserver(() => {
       const theme = readChartTheme(host);
       const colors = readSeriesColors(host);
-      chart.applyOptions(compareOptions(theme, latest.current.range));
-      for (const { api, slot } of map.values()) {
-        api.applyOptions(seriesOptions(theme, colors[slot % colors.length]!));
+      const { range, view } = latest.current;
+      chart.applyOptions(compareOptions(theme, range, view));
+      for (const { api, color } of map.values()) {
+        api.applyOptions(seriesOptions(theme, colors[color] ?? colors[0]!, view));
       }
       if (baseline.current) {
         baseline.current.line.applyOptions(baselineOptions(theme));
@@ -159,6 +177,8 @@ export default function CompareCanvas({
     const theme = readChartTheme(host);
     const colors = readSeriesColors(host);
     const wanted = new Set(series.map((s) => s.id));
+    const viewChanged = shownView.current !== view;
+    shownView.current = view;
 
     for (const [id, entry] of map) {
       if (wanted.has(id)) continue;
@@ -169,23 +189,24 @@ export default function CompareCanvas({
     }
 
     for (const s of series) {
-      const color = colors[s.slot % colors.length]!;
+      const color = colors[s.color] ?? colors[0]!;
       let entry = map.get(s.id);
       if (!entry) {
         entry = {
-          api: chart.addSeries(LineSeries, seriesOptions(theme, color)),
-          slot: s.slot,
+          api: chart.addSeries(LineSeries, seriesOptions(theme, color, view)),
+          color: s.color,
         };
         map.set(s.id, entry);
-      } else if (entry.slot !== s.slot) {
-        entry.api.applyOptions(seriesOptions(theme, color));
-        entry.slot = s.slot;
+      } else if (entry.color !== s.color || viewChanged) {
+        entry.api.applyOptions(seriesOptions(theme, color, view));
+        entry.color = s.color;
       }
       entry.api.setData(s.points.map((p) => ({ time: asTime(p.time), value: p.value })));
     }
 
-    // The 0% reference hangs on the first line; move it if that line changed.
-    const first = series[0] ? map.get(series[0].id) : undefined;
+    // The 0% reference hangs on the first line (and only means something for percent
+    // change); move it if that line changed, drop it in the price view.
+    const first = view === "change" && series[0] ? map.get(series[0].id) : undefined;
     if (baseline.current && baseline.current.api !== first?.api) {
       baseline.current.api.removePriceLine(baseline.current.line);
       baseline.current = null;
@@ -199,15 +220,15 @@ export default function CompareCanvas({
 
     latest.current.onCrosshair(null);
     chart.timeScale().fitContent();
-  }, [series]);
+  }, [series, view]);
 
   // 3. Time formatting follows the range.
   useEffect(() => {
     const chart = chartRef.current;
     const host = hostRef.current;
     if (!chart || !host) return;
-    chart.applyOptions(compareOptions(readChartTheme(host), range));
-  }, [range]);
+    chart.applyOptions(compareOptions(readChartTheme(host), range, view));
+  }, [range, view]);
 
   return <div ref={hostRef} className={cn("size-full", className)} />;
 }
