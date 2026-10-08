@@ -11,7 +11,7 @@ const cardVariants = cva("border border-primary bg-primary", {
     padding: { none: "", sm: "p-4", md: "p-6", lg: "p-8" },
     /** Highlights on hover. Use for cards that are (or contain) a link. */
     interactive: {
-      true: "transition-colors duration-150 ease-standard hover:bg-overlay-hover",
+      true: "transition-colors duration-fast ease-standard hover:bg-overlay-hover active:bg-overlay-pressed",
       false: "",
     },
   },

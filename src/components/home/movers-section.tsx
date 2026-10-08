@@ -1,9 +1,10 @@
 "use client";
 
 import { TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { useMemo } from "react";
 import { Sparkline } from "@/components/charts/sparkline";
+import { CoinLink } from "@/components/motion/coin-link";
+import { SharedCoin } from "@/components/motion/shared-coin";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -24,24 +25,32 @@ const COLUMNS =
 function MoverRow({ coin, index }: { coin: MarketCoin; index: number }) {
   return (
     <li className={ROW}>
-      <Link
-        href={`/coin/${coin.id}`}
-        className={`${COLUMNS} h-full px-2 transition-colors duration-150 ease-standard hover:bg-overlay-hover`}
+      <CoinLink
+        coin={coin}
+        className={`${COLUMNS} h-full px-2 transition-colors duration-fast ease-standard hover:bg-overlay-hover active:bg-overlay-pressed`}
       >
         <RowIndex n={index + 1} />
         <span className="flex min-w-0 items-center gap-3">
-          <CoinLogo src={coin.image} name={coin.name} size={32} />
-          <span className="min-w-0 leading-tight">
-            <span className="block truncate text-body-lg text-primary">{coin.name}</span>
-            <span className="num text-mono-sm text-muted">{coin.symbol}</span>
-          </span>
+          <SharedCoin id={coin.id} part="logo">
+            <CoinLogo src={coin.image} name={coin.name} size={32} />
+          </SharedCoin>
+          <SharedCoin id={coin.id} part="name">
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-body-lg text-primary">
+                {coin.name}
+              </span>
+              <span className="num text-mono-sm text-muted">{coin.symbol}</span>
+            </span>
+          </SharedCoin>
         </span>
         <Sparkline data={coin.sparkline} className="hidden h-7 sm:block" />
         <span className="flex flex-col items-end gap-1">
-          <Price value={coin.price} className="text-mono-md text-primary" />
+          <SharedCoin id={coin.id} part="price">
+            <Price value={coin.price} className="text-mono-md text-primary" />
+          </SharedCoin>
           <PercentChange value={coin.change24h} className="text-mono-sm" />
         </span>
-      </Link>
+      </CoinLink>
     </li>
   );
 }

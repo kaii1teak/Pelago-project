@@ -1,5 +1,5 @@
 import { act, render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ChartCanvas, { type ChartControls, type CrosshairInfo } from "./chart-canvas";
 
 // A recording stand-in for the charting library: we assert how it's *driven*.
@@ -743,5 +743,54 @@ describe("ChartCanvas: price axis", () => {
   it("keeps candles in dollars: a percent axis makes no sense for them", () => {
     setup({ mode: "candle", line: [], candles, scale: "percent" });
     expect(modeOf().mode).toBe(0);
+  });
+});
+
+describe("ChartCanvas: fading a new picture in", () => {
+  const animate = vi.fn();
+  beforeEach(() => {
+    animate.mockClear();
+    Element.prototype.animate = animate;
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "animate");
+  });
+
+  const rerenderWith = (
+    rerender: (ui: React.ReactElement) => void,
+    onCrosshair: (info: CrosshairInfo | null) => void,
+    props: Partial<React.ComponentProps<typeof ChartCanvas>>,
+  ) =>
+    rerender(
+      <ChartCanvas
+        mode="line"
+        line={line}
+        candles={[]}
+        range="7d"
+        onCrosshair={onCrosshair}
+        {...props}
+      />,
+    );
+
+  it("fades when the timeframe changes", () => {
+    const { rerender, onCrosshair } = setup({ range: "7d" });
+    animate.mockClear();
+    rerenderWith(rerender, onCrosshair, { range: "30d" });
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animate.mock.calls[0]![0]).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+  });
+
+  it("fades when the chart switches between line and candles", () => {
+    const { rerender, onCrosshair } = setup({ mode: "line" });
+    animate.mockClear();
+    rerenderWith(rerender, onCrosshair, { mode: "candle", candles });
+    expect(animate).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fade when the same chart just refreshes its data", () => {
+    const { rerender, onCrosshair } = setup();
+    animate.mockClear();
+    rerenderWith(rerender, onCrosshair, { line: [...line, { time: 300, value: 13 }] });
+    expect(animate).not.toHaveBeenCalled();
   });
 });

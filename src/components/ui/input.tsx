@@ -25,7 +25,7 @@ export function Input({ className, icon, ...props }: InputProps) {
         className={cn(
           "h-10 w-full rounded-control border border-control bg-primary text-body-md text-primary",
           "placeholder:text-muted",
-          "transition-colors duration-150 ease-standard",
+          "transition-colors duration-fast ease-standard",
           "hover:bg-overlay-subtle focus-visible:border-info",
           icon ? "pr-3 pl-9" : "px-3",
           className,

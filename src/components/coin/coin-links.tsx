@@ -37,7 +37,7 @@ export function CoinLinks({ coin }: { coin: CoinDetail }) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex min-h-14 items-center justify-between gap-6 px-2 py-3 transition-colors duration-150 ease-standard hover:bg-overlay-hover"
+              className="flex min-h-14 items-center justify-between gap-6 px-2 py-3 transition-colors duration-fast ease-standard hover:bg-overlay-hover active:bg-overlay-pressed"
             >
               <span className="shrink-0 label-mono text-muted">{label}</span>
               <span className="flex min-w-0 items-center gap-2 num text-mono-md text-primary">

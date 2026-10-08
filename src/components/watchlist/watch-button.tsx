@@ -35,7 +35,7 @@ export function WatchButton({
         className={cn(
           "size-10",
           watched ? "text-accent" : "text-muted",
-          "[&_svg]:transition-[fill,color] [&_svg]:duration-200",
+          "[&_svg]:transition-[fill,color] [&_svg]:duration-base",
           className,
         )}
       >

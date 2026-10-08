@@ -10,6 +10,7 @@ import {
   matchScore,
   pageItems,
   searchAssets,
+  shortcutsItem,
   themeItem,
   type PaletteAsset,
 } from "./palette";
@@ -135,6 +136,26 @@ describe("commands", () => {
     expect(themeItem("light").label).toBe("Switch to dark theme");
   });
 
+  it("shows each page's keyboard shortcut beside it, as the catalog has it", () => {
+    expect(pages.map((p) => p.hotkey)).toEqual([
+      "go.home",
+      "go.markets",
+      "go.watchlist",
+      "go.compare",
+    ]);
+    expect(themeItem("dark").hotkey).toBe("theme");
+    expect(shortcutsItem().hotkey).toBe("shortcuts");
+  });
+
+  it("offers the keyboard shortcuts overlay, found by what people call it", () => {
+    const item = shortcutsItem();
+    expect(item.label).toBe("Keyboard shortcuts");
+    for (const word of ["keyboard", "hotkeys", "keys", "help", "short"]) {
+      expect(commandMatches(item, word), word).toBe(true);
+    }
+    expect(commandMatches(item, "bitcoin")).toBe(false);
+  });
+
   it("matches a page by the start of any word", () => {
     const markets = pages.find((p) => p.label === "Markets")!;
     expect(commandMatches(markets, "mark")).toBe(true);
@@ -205,6 +226,7 @@ describe("buildGroups", () => {
       "page",
       "page",
       "page",
+      "action",
       "action",
       "asset",
       "asset",

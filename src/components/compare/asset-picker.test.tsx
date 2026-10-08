@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { makeCoin } from "@/test/fixtures";
@@ -45,6 +45,8 @@ describe("AssetPicker", () => {
     await user.click(box);
     const options = screen.getAllByRole("option");
     expect(options).toHaveLength(3);
+    // The popup fades in: visible once that has run.
+    await waitFor(() => expect(within(options[0]!).getByText("Bitcoin")).toBeVisible());
     ["Bitcoin", "Solana", "Dogecoin"].forEach((name, i) => {
       expect(within(options[i]!).getByText(name)).toBeVisible();
     });
@@ -150,7 +152,7 @@ describe("AssetPicker", () => {
   it("shows a loading message while the asset list loads", async () => {
     const { box, user } = setup({ coins: undefined, status: "loading" });
     await user.click(box);
-    expect(screen.getByText("Loading assets…")).toBeVisible();
+    await waitFor(() => expect(screen.getByText("Loading assets…")).toBeVisible());
   });
 
   it("offers a retry when the asset list failed to load", async () => {
@@ -168,6 +170,8 @@ describe("AssetPicker", () => {
     const { box, user } = setup({ coins: many });
     await user.click(box);
     expect(screen.getAllByRole("option")).toHaveLength(8);
-    expect(within(screen.getAllByRole("option")[0]!).getByText("#1")).toBeVisible();
+    await waitFor(() =>
+      expect(within(screen.getAllByRole("option")[0]!).getByText("#1")).toBeVisible(),
+    );
   });
 });

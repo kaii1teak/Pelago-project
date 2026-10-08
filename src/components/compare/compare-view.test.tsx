@@ -310,7 +310,8 @@ describe("CompareView: choosing assets", () => {
     renderWithClient(<CompareView />);
     await canvas();
     await userEvent.click(screen.getByRole("combobox"));
-    expect(await screen.findByRole("option", { name: /Ethereum/ })).toBeVisible();
+    const option = await screen.findByRole("option", { name: /Ethereum/ });
+    await waitFor(() => expect(option).toBeVisible()); // the popup fades in
     expect(screen.queryByRole("option", { name: /Bitcoin/ })).toBeNull();
   });
 

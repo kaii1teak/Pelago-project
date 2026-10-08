@@ -12,11 +12,16 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useChartUrlState } from "@/hooks/use-chart-url-state";
+import { HotkeyTip } from "@/components/shortcuts/hotkey-tip";
+import { Tooltip } from "@/components/ui/tooltip";
+import type { HotkeyId } from "@/lib/hotkeys/catalog";
+import { useHotkey } from "@/hooks/use-hotkey";
 import { useCoinChartHistory, useCoinOhlc } from "@/lib/api/hooks";
 import {
   CHART_RANGES,
   RANGE_NAME,
   isChartRange,
+  type ChartRange,
   type ChartMode,
   type ChartScale,
 } from "@/lib/chart";
@@ -109,6 +114,15 @@ function ChartHint({
   );
 }
 
+/** Each range's shortcut: the catalog id, and the key for aria-keyshortcuts. */
+const RANGE_HOTKEY = {
+  "24h": "chart.24h",
+  "7d": "chart.7d",
+  "30d": "chart.30d",
+  "1y": "chart.1y",
+} as const satisfies Record<ChartRange, HotkeyId>;
+const RANGE_KEY = { "24h": "1", "7d": "2", "30d": "3", "1y": "4" } as const;
+
 export function PriceChart({ id, name }: { id: string; name: string }) {
   const { range, mode, scale, setRange, setMode, setScale } = useChartUrlState();
   // The line chart can be scrolled back through time: `history` holds the timeframe's own
@@ -125,6 +139,16 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
     history.reset();
     setResetKey((k) => k + 1);
   };
+
+  // Keyboard: 1-4 pick the range (the one already showing means "back to the latest", as
+  // pressing its tab again does), c switches between line and candles.
+  const pickRange = (next: ChartRange) =>
+    next === range ? showLatest() : setRange(next);
+  useHotkey("chart.24h", () => pickRange("24h"));
+  useHotkey("chart.7d", () => pickRange("7d"));
+  useHotkey("chart.30d", () => pickRange("30d"));
+  useHotkey("chart.1y", () => pickRange("1y"));
+  useHotkey("chart.mode", () => setMode(mode === "line" ? "candle" : "line"));
 
   const query = mode === "line" ? line : ohlc;
   // What is on the chart (all loaded history) vs. what the timeframe's numbers describe
@@ -188,7 +212,7 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
         role="img"
         aria-label={label}
         className={cn(
-          "relative h-chart transition-opacity duration-250 ease-standard",
+          "relative h-chart transition-opacity duration-base ease-standard",
           query.isPlaceholderData && "opacity-60",
         )}
       >
@@ -223,18 +247,23 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
           <TabsList aria-label="Time range" className="border-b-0">
             {CHART_RANGES.map((r) => (
-              <TabsTrigger
+              <Tooltip
                 key={r}
-                value={r}
-                className="num"
-                // Radix only reports a CHANGE of tab; pressing the one that is already
-                // selected means "show me the latest again" (after scrolling back in time).
-                onClick={() => {
-                  if (r === range) showLatest();
-                }}
+                content={<HotkeyTip label={RANGE_NAME[r]} id={RANGE_HOTKEY[r]} />}
               >
-                {r.toUpperCase()}
-              </TabsTrigger>
+                <TabsTrigger
+                  value={r}
+                  className="num"
+                  aria-keyshortcuts={RANGE_KEY[r]}
+                  // Radix only reports a CHANGE of tab; pressing the one that is already
+                  // selected means "show me the latest again" (after scrolling back in time).
+                  onClick={() => {
+                    if (r === range) showLatest();
+                  }}
+                >
+                  {r.toUpperCase()}
+                </TabsTrigger>
+              </Tooltip>
             ))}
           </TabsList>
           <div className="flex flex-wrap items-center gap-3">
@@ -298,19 +327,23 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
         >
           <dl className="contents">
             <SummaryCell label="Start">
-              <Price value={summary.first} />
+              <Price value={summary.first} tweenKey={range} />
             </SummaryCell>
             <SummaryCell label="Latest">
-              <Price value={summary.last} />
+              <Price value={summary.last} tweenKey={range} />
             </SummaryCell>
             <SummaryCell label="High">
-              <Price value={summary.high} />
+              <Price value={summary.high} tweenKey={range} />
             </SummaryCell>
             <SummaryCell label="Low">
-              <Price value={summary.low} />
+              <Price value={summary.low} tweenKey={range} />
             </SummaryCell>
             <SummaryCell label="Change">
-              <PercentChange value={summary.change} className="text-mono-sm" />
+              <PercentChange
+                value={summary.change}
+                tweenKey={range}
+                className="text-mono-sm"
+              />
             </SummaryCell>
           </dl>
         </div>

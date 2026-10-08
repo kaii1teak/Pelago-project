@@ -2,6 +2,7 @@
 
 import { SearchX } from "lucide-react";
 import Link from "next/link";
+import { FadeIn } from "@/components/motion/fade-in";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -49,12 +50,12 @@ export function CoinView({ id }: { id: string }) {
   }
 
   return (
-    <div className="space-y-20 md:space-y-28">
+    <FadeIn className="space-y-20 md:space-y-28">
       <PriceHeader coin={coin} />
       <PriceChart id={coin.id} name={coin.name} />
       <KeyStats coin={coin} />
       <AboutSection coin={coin} />
       <CoinLinks coin={coin} />
-    </div>
+    </FadeIn>
   );
 }

@@ -71,7 +71,7 @@ export function TabsTrigger({
       value={value}
       className={cn(
         "relative inline-flex h-10 items-center justify-center px-3 text-body-md font-medium whitespace-nowrap",
-        "text-secondary transition-colors duration-150 ease-standard hover:text-primary data-[state=active]:text-primary",
+        "text-secondary transition-colors duration-fast ease-standard hover:text-primary data-[state=active]:text-primary",
         "disabled:pointer-events-none disabled:text-disabled",
         className,
       )}

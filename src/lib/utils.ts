@@ -77,9 +77,15 @@ export const COLOR_NAMES = [
   "chart-10",
 ] as const;
 
+/** Motion tokens: duration-fast ... and ease-standard / ease-spring (see --duration-* in globals.css). */
+export const DURATION_NAMES = ["fast", "base", "slow", "slower"] as const;
+export const EASE_NAMES = ["standard", "spring"] as const;
+
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
+      duration: [{ duration: [...DURATION_NAMES] }],
+      ease: [{ ease: [...EASE_NAMES] }],
       "font-size": [{ text: [...FONT_SIZES] }],
       "text-color": [{ text: [...COLOR_NAMES] }],
       "bg-color": [{ bg: [...COLOR_NAMES] }],

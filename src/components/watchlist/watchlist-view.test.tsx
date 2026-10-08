@@ -260,6 +260,22 @@ describe("WatchlistView: removing", () => {
     );
   });
 
+  it("when the selected ROW (j / k) is removed, selects the next row, so j and k carry on", async () => {
+    marketsApi();
+    await savedList(["bitcoin", "ethereum", "solana"]);
+    renderWithClient(<WatchlistView />);
+    await screen.findByRole("table");
+
+    const rows = () => screen.getAllByRole("row").slice(1); // minus the header
+    rows()[1]!.focus(); // Ethereum is the selected row
+    // What the w key does: press the row's star, without moving focus off the row.
+    act(() => within(rows()[1]!).getByRole("button", { name: "Watch Ethereum" }).click());
+
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    await waitFor(() => expect(rows()[1]).toHaveFocus());
+    expect(rows()[1]).toHaveTextContent("Solana");
+  });
+
   it("moves focus to the heading once the last asset is removed", async () => {
     marketsApi();
     await savedList(["bitcoin"]);

@@ -8,6 +8,7 @@ import {
   GitCompareArrows,
   House,
   LoaderCircle,
+  Keyboard,
   Moon,
   Search,
   Star,
@@ -36,6 +37,8 @@ import {
 import { NAV_LINKS } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { usePaletteStore } from "@/stores/palette";
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys";
+import { useHotkeysStore } from "@/stores/hotkeys";
 import { Kbd } from "./kbd";
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -48,22 +51,6 @@ const PAGE_ICON: Record<string, LucideIcon> = {
   "/compare": GitCompareArrows,
 };
 
-/** Cmd/Ctrl+K from anywhere, even from inside a text field (as every palette does). */
-function useShortcut() {
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      // `code` so it works on non-Latin layouts, where `key` is the local letter.
-      const isK = event.code === "KeyK" || event.key.toLowerCase() === "k";
-      if (isK && (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey) {
-        event.preventDefault();
-        usePaletteStore.getState().toggle();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-}
-
 /**
  * A command palette: jump to a page, switch the theme, or find any asset in the
  * market. Mounted once for the whole app. The dialog (focus trap, Escape, scroll ё
@@ -73,7 +60,6 @@ function useShortcut() {
 export function CommandPalette() {
   const open = usePaletteStore((s) => s.open);
   const setOpen = usePaletteStore((s) => s.setOpen);
-  useShortcut();
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -165,7 +151,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const choose = (item: PaletteItem) => {
     if (item.kind === "action") {
       onClose();
-      toggleTheme();
+      if (item.id === "show-shortcuts") useHotkeysStore.getState().openOverlay();
+      else toggleTheme();
     } else {
       usePaletteStore.setState({ opener: null });
       onClose();
@@ -339,6 +326,7 @@ function Option({
   onPointer: () => void;
   onChoose: () => void;
 }) {
+  const shortcutsOn = useHotkeysStore((s) => s.enabled);
   let leading: React.ReactNode;
   let label: string;
   let hint: React.ReactNode = null;
@@ -357,9 +345,11 @@ function Option({
   } else {
     const Icon =
       item.kind === "action"
-        ? theme === "dark"
-          ? Sun
-          : Moon
+        ? item.id === "show-shortcuts"
+          ? Keyboard
+          : theme === "dark"
+            ? Sun
+            : Moon
         : (PAGE_ICON[item.href] ?? House);
     label = item.label;
     leading = (
@@ -367,7 +357,14 @@ function Option({
         <Icon className="size-4" aria-hidden="true" />
       </span>
     );
-    if (item.kind === "page") {
+    // The shortcut for the same thing, when shortcuts are on; otherwise where it goes.
+    if (item.hotkey && shortcutsOn) {
+      hint = (
+        <span aria-hidden="true">
+          <ShortcutKeys id={item.hotkey} />
+        </span>
+      );
+    } else if (item.kind === "page") {
       hint = <span className="num text-mono-sm text-secondary">{item.href}</span>;
     }
   }

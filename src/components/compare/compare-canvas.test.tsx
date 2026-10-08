@@ -1,5 +1,5 @@
 import { act, render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CompareCanvas, {
   type CompareCrosshair,
   type CompareSeries,
@@ -360,5 +360,40 @@ describe("CompareCanvas: price view", () => {
     expect(first.removePriceLine).toHaveBeenCalledTimes(1);
     rerender([btc, eth], "7d", "change");
     expect(first.createPriceLine).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("CompareCanvas: fading a new picture in", () => {
+  const animate = vi.fn();
+  beforeEach(() => {
+    animate.mockClear();
+    Element.prototype.animate = animate;
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "animate");
+  });
+
+  it("fades when the range changes", () => {
+    const { rerender } = setup([btc, eth], "7d");
+    animate.mockClear();
+    rerender([btc, eth], "1y");
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animate.mock.calls[0]![0]).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+  });
+
+  it("fades when the view switches between percent and price", () => {
+    const { rerender } = setup([btc, eth], "7d", "change");
+    animate.mockClear();
+    rerender([btc, eth], "7d", "price");
+    expect(animate).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fade for a new color, or when an asset is added or removed", () => {
+    const { rerender } = setup([btc, eth]);
+    animate.mockClear();
+    rerender([btc, { ...eth, color: 6 }]);
+    rerender([btc, eth, sol]);
+    rerender([btc]);
+    expect(animate).not.toHaveBeenCalled();
   });
 });

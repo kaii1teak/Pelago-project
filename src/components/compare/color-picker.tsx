@@ -1,7 +1,9 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { MotionPopover } from "@/components/motion/motion-popover";
 import { COMPARE_PALETTE } from "@/lib/compare";
 import { cn } from "@/lib/utils";
 
@@ -109,48 +111,50 @@ export function ColorPicker({
         aria-controls={open ? `${base}-grid` : undefined}
         onClick={() => setOpen((o) => !o)}
         // A wider hit area than the 4px bar it draws.
-        className="flex h-8 w-4 items-center justify-center rounded-control transition-colors duration-150 ease-standard hover:bg-overlay-hover"
+        className="flex h-8 w-4 items-center justify-center rounded-control transition-colors duration-fast ease-standard hover:bg-overlay-hover active:bg-overlay-pressed"
       >
         <Swatch color={value} className="h-8 w-1 shrink-0" />
       </button>
 
-      {open && (
-        <div
-          ref={grid}
-          id={`${base}-grid`}
-          role="radiogroup"
-          aria-label={`Color for ${assetName}`}
-          // w-max: an absolutely placed box is as wide as its room, and the room under a
-          // 16px swatch is 16px, which would stack the ten colors on top of each other.
-          className="absolute top-full left-0 z-30 mt-2 grid w-max grid-cols-5 gap-2 border border-strong bg-primary p-3 shadow-dropdown"
-        >
-          {COMPARE_PALETTE.map((color, i) => (
-            <button
-              key={color.token}
-              ref={(el) => {
-                options.current[i] = el;
-              }}
-              type="button"
-              role="radio"
-              aria-checked={i === value}
-              aria-label={color.name}
-              // Roving tabindex: one Tab stop for the whole grid.
-              tabIndex={i === value ? 0 : -1}
-              onKeyDown={(event) => move(event, i)}
-              onClick={() => {
-                onChange(i);
-                close(true);
-              }}
-              style={{ backgroundColor: cssColor(i) }}
-              className="flex size-7 items-center justify-center rounded-control text-primary"
-            >
-              {i === value && (
-                <Check className="size-4 mix-blend-difference" aria-hidden="true" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <MotionPopover
+            ref={grid}
+            id={`${base}-grid`}
+            role="radiogroup"
+            aria-label={`Color for ${assetName}`}
+            // w-max: an absolutely placed box is as wide as its room, and the room under a
+            // 16px swatch is 16px, which would stack the ten colors on top of each other.
+            className="absolute top-full left-0 z-30 mt-2 grid w-max grid-cols-5 gap-2 border border-strong bg-primary p-3 shadow-dropdown"
+          >
+            {COMPARE_PALETTE.map((color, i) => (
+              <button
+                key={color.token}
+                ref={(el) => {
+                  options.current[i] = el;
+                }}
+                type="button"
+                role="radio"
+                aria-checked={i === value}
+                aria-label={color.name}
+                // Roving tabindex: one Tab stop for the whole grid.
+                tabIndex={i === value ? 0 : -1}
+                onKeyDown={(event) => move(event, i)}
+                onClick={() => {
+                  onChange(i);
+                  close(true);
+                }}
+                style={{ backgroundColor: cssColor(i) }}
+                className="flex size-7 items-center justify-center rounded-control text-primary"
+              >
+                {i === value && (
+                  <Check className="size-4 mix-blend-difference" aria-hidden="true" />
+                )}
+              </button>
+            ))}
+          </MotionPopover>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

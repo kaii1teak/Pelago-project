@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dispatcher } from "@/hooks/use-hotkey";
 import { queryKeys } from "@/lib/api/query-keys";
 import { installHistoryMock, uninstallHistoryMock } from "@/test/navigation";
 import { renderWithClient } from "@/test/render";
@@ -516,5 +517,71 @@ describe("PriceChart: scrolling back in time", () => {
     );
     setup("/coin/bitcoin?mode=candle");
     expect(screen.getByText(/Candles cover the selected range only/)).toBeVisible();
+  });
+});
+
+describe("PriceChart: keyboard", () => {
+  const key = (k: string) =>
+    act(() => {
+      dispatcher.handleKeyDown(
+        new KeyboardEvent("keydown", {
+          key: k,
+          code: /^\d$/.test(k) ? `Digit${k}` : `Key${k.toUpperCase()}`,
+        }),
+      );
+    });
+  const quietApi = () =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(async () => new Response(JSON.stringify(line))),
+    );
+
+  it("1 to 4 pick the range, as clicking its tab does", async () => {
+    quietApi();
+    setup();
+    key("3");
+    expect(search()).toBe("?range=30d");
+    key("1");
+    expect(search()).toBe("?range=24h");
+    key("4");
+    expect(search()).toBe("?range=1y");
+    key("2"); // back to the default: nothing to record
+    expect(search()).toBe("");
+    await waitFor(() => expect(chart()).toHaveAttribute("data-range", "7d"));
+  });
+
+  it("the key of the range already showing goes back to its latest window", () => {
+    quietApi();
+    setup();
+    const resets = Number(chart().getAttribute("data-reset"));
+    key("2"); // 7D is the range showing
+    expect(Number(chart().getAttribute("data-reset"))).toBe(resets + 1);
+    expect(search()).toBe("");
+  });
+
+  it("c switches between the line and candles", () => {
+    quietApi();
+    setup();
+    key("c");
+    expect(search()).toBe("?mode=candle");
+    key("c");
+    expect(search()).toBe("");
+  });
+
+  it("names its keys on the tabs for assistive technology", () => {
+    setup();
+    const keys = ["24H", "7D", "30D", "1Y"].map((name) =>
+      screen.getByRole("tab", { name }).getAttribute("aria-keyshortcuts"),
+    );
+    expect(keys).toEqual(["1", "2", "3", "4"]);
+  });
+
+  it("stops answering once the chart is gone (1-4 are plain keys on other pages)", () => {
+    quietApi();
+    const { unmount } = setup();
+    unmount();
+    key("3");
+    key("c");
+    expect(search()).toBe("");
   });
 });

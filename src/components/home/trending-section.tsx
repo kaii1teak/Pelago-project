@@ -2,6 +2,8 @@
 
 import { ArrowRight, Flame } from "lucide-react";
 import Link from "next/link";
+import { CoinLink } from "@/components/motion/coin-link";
+import { SharedCoin } from "@/components/motion/shared-coin";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -22,17 +24,23 @@ const COLUMNS =
 function TrendingRow({ coin, index }: { coin: TrendingCoin; index: number }) {
   return (
     <li className={ROW}>
-      <Link
-        href={`/coin/${coin.id}`}
-        className={`${COLUMNS} h-full px-2 transition-colors duration-150 ease-standard hover:bg-overlay-hover`}
+      <CoinLink
+        coin={coin}
+        className={`${COLUMNS} h-full px-2 transition-colors duration-fast ease-standard hover:bg-overlay-hover active:bg-overlay-pressed`}
       >
         <RowIndex n={index + 1} />
         <span className="flex min-w-0 items-center gap-3">
-          <CoinLogo src={coin.image} name={coin.name} size={32} />
-          <span className="min-w-0 leading-tight">
-            <span className="block truncate text-body-lg text-primary">{coin.name}</span>
-            <span className="num text-mono-sm text-muted">{coin.symbol}</span>
-          </span>
+          <SharedCoin id={coin.id} part="logo">
+            <CoinLogo src={coin.image} name={coin.name} size={32} />
+          </SharedCoin>
+          <SharedCoin id={coin.id} part="name">
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-body-lg text-primary">
+                {coin.name}
+              </span>
+              <span className="num text-mono-sm text-muted">{coin.symbol}</span>
+            </span>
+          </SharedCoin>
         </span>
         <span className="hidden num text-mono-md text-muted sm:block">
           {coin.rank != null ? `#${coin.rank}` : ""}
@@ -42,13 +50,15 @@ function TrendingRow({ coin, index }: { coin: TrendingCoin; index: number }) {
             the 4th item wrapped onto a second row and spilled out of the left edge. */}
         <span className="flex flex-col items-end gap-1 sm:contents">
           <span className="text-right">
-            <Price value={coin.price} className="text-mono-md text-primary" />
+            <SharedCoin id={coin.id} part="price">
+              <Price value={coin.price} className="text-mono-md text-primary" />
+            </SharedCoin>
           </span>
           <span className="flex justify-end">
             <PercentChange value={coin.change24h} className="text-mono-sm" />
           </span>
         </span>
-      </Link>
+      </CoinLink>
     </li>
   );
 }
@@ -90,7 +100,7 @@ export function TrendingSection() {
         action={
           <Link
             href="/markets"
-            className="group inline-flex items-center gap-1.5 text-body-md text-secondary transition-colors duration-150 ease-standard hover:text-primary"
+            className="group inline-flex items-center gap-1.5 text-body-md text-secondary transition-colors duration-fast ease-standard hover:text-primary"
           >
             View all markets
             <ArrowRight className="size-4" aria-hidden="true" />

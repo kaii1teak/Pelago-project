@@ -7,6 +7,7 @@ import { usePaletteStore } from "@/stores/palette";
 import { makeCoin } from "@/test/fixtures";
 import { resetRouterCalls, routerCalls } from "@/test/navigation";
 import { renderWithClient } from "@/test/render";
+import { HotkeysProvider } from "@/providers/hotkeys-provider";
 import { CommandPalette } from "./command-palette";
 
 vi.mock(
@@ -52,8 +53,13 @@ function searchApi() {
 
 function setup() {
   const fetchMock = searchApi();
-  const view = renderWithClient(<CommandPalette />, (client) =>
-    client.setQueryData(queryKeys.markets(undefined), TOP),
+  // Ctrl/Cmd+K is the shortcut system's, so it is mounted too.
+  const view = renderWithClient(
+    <>
+      <CommandPalette />
+      <HotkeysProvider />
+    </>,
+    (client) => client.setQueryData(queryKeys.markets(undefined), TOP),
   );
   return { ...view, fetchMock, user: userEvent.setup() };
 }

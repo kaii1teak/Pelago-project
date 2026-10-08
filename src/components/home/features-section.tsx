@@ -111,7 +111,7 @@ export function FeaturesSection() {
               return (
                 <li
                   key={feature.title}
-                  className="lg:line-bleed-bottom first:lg:line-bleed-top border-b border-primary lg:border-b-0 lg:pl-6"
+                  className="border-b border-primary lg:line-bleed-bottom lg:border-b-0 lg:pl-6 first:lg:line-bleed-top"
                 >
                   <h3>
                     <button
@@ -127,7 +127,7 @@ export function FeaturesSection() {
                     >
                       <span
                         className={cn(
-                          "text-heading-md transition-colors duration-250 ease-standard",
+                          "text-heading-md transition-colors duration-base ease-standard",
                           expanded ? "text-primary" : "text-muted",
                         )}
                       >
@@ -140,7 +140,7 @@ export function FeaturesSection() {
                     id={`feature-panel-${i}`}
                     role="region"
                     className={cn(
-                      "grid transition-[grid-template-rows] duration-250 ease-standard",
+                      "grid transition-[grid-template-rows] duration-base ease-standard",
                       expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                     )}
                   >

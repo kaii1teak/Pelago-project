@@ -1,20 +1,29 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
+import { Inter, Krub, Roboto_Mono } from "next/font/google";
 import { CommandPalette } from "@/components/command/command-palette";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SITE } from "@/lib/site";
 import { THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
+import { HotkeysProvider } from "@/providers/hotkeys-provider";
 import { MotionProvider } from "@/providers/motion-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { StoreHydrator } from "@/providers/store-hydrator";
 import "./globals.css";
 
-const roboto = Roboto({
-  variable: "--font-roboto",
+// Inter for headings, Krub for text, Roboto Mono for figures and labels. Which one
+// each class uses is decided in globals.css (--font-heading, --font-sans, --font-mono).
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap", // a variable font: every weight from one file
+});
+
+const krub = Krub({
+  variable: "--font-krub",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"], // the three the UI uses (normal, medium, semibold)
   display: "swap",
 });
 
@@ -56,7 +65,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // instantly on route changes (Next 16 stopped doing that on its own).
       data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${roboto.variable} ${robotoMono.variable}`}
+      className={`${inter.variable} ${krub.variable} ${robotoMono.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
@@ -76,6 +85,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <TooltipProvider>
               <StoreHydrator />
               <CommandPalette />
+              <HotkeysProvider />
               <Header />
               <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
                 {children}

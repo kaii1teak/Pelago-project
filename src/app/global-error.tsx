@@ -25,7 +25,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={() => retry()}
-            className="h-9 rounded-control bg-btn-primary px-3 text-body-md font-semibold text-btn-primary-text transition-colors duration-150 ease-standard hover:bg-btn-primary-hover"
+            className="h-9 rounded-control bg-btn-primary px-3 text-body-md font-semibold text-btn-primary-text transition-colors duration-fast ease-standard hover:bg-btn-primary-hover"
           >
             Try again
           </button>

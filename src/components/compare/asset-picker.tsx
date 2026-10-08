@@ -2,6 +2,8 @@
 
 import { Plus } from "lucide-react";
 import { useId, useMemo, useState } from "react";
+import { AnimatePresence } from "motion/react";
+import { MotionPopover } from "@/components/motion/motion-popover";
 import { Button } from "@/components/ui/button";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { Input } from "@/components/ui/input";
@@ -105,6 +107,7 @@ export function AssetPicker({
         ref={inputRef}
         id={`${base}-input`}
         role="combobox"
+        data-hotkey-search
         aria-expanded={expanded}
         aria-controls={expanded ? listId : undefined}
         aria-autocomplete="list"
@@ -137,56 +140,58 @@ export function AssetPicker({
         </p>
       )}
 
-      {expanded && (
-        // mousedown must not blur the input, or the click would land on a closed list.
-        // tabIndex -1: Chrome makes a scrolling box a Tab stop of its own, so without it
-        // Tab from the input would land here, the list would close and focus be dropped.
-        <div
-          tabIndex={-1}
-          className="absolute top-full right-0 left-0 z-20 mt-1 max-h-80 overflow-auto border border-strong bg-primary shadow-dropdown"
-          onMouseDown={(event) => event.preventDefault()}
-        >
-          {status === "error" && (
-            <div className="flex items-center justify-between gap-3 px-3 py-3">
-              <span className="text-body-md text-secondary">
-                Couldn&apos;t load the asset list.
-              </span>
-              <Button variant="outline" size="sm" onClick={onRetry}>
-                Try again
-              </Button>
-            </div>
-          )}
-          {message && (
-            <p role="status" className="px-3 py-3 text-body-md text-muted">
-              {message}
-            </p>
-          )}
-          {results.length > 0 && (
-            <ul id={listId} role="listbox" aria-label="Assets">
-              {results.map((coin, i) => (
-                <li
-                  key={coin.id}
-                  id={optionId(i)}
-                  role="option"
-                  aria-selected={i === activeIndex}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => pick(coin)}
-                  className="flex cursor-pointer items-center gap-3 px-3 py-2 aria-selected:bg-overlay-hover"
-                >
-                  <CoinLogo src={coin.image} name={coin.name} size={24} />
-                  <span className="min-w-0 flex-1 truncate text-body-md text-primary">
-                    {coin.name}
-                  </span>
-                  <span className="num text-mono-sm text-muted">{coin.symbol}</span>
-                  <span className="w-10 text-right num text-mono-sm text-muted">
-                    {coin.rank ? `#${coin.rank}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {expanded && (
+          // mousedown must not blur the input, or the click would land on a closed list.
+          // tabIndex -1: Chrome makes a scrolling box a Tab stop of its own, so without it
+          // Tab from the input would land here, the list would close and focus be dropped.
+          <MotionPopover
+            tabIndex={-1}
+            className="absolute top-full right-0 left-0 z-20 mt-1 max-h-80 overflow-auto border border-strong bg-primary shadow-dropdown"
+            onMouseDown={(event) => event.preventDefault()}
+          >
+            {status === "error" && (
+              <div className="flex items-center justify-between gap-3 px-3 py-3">
+                <span className="text-body-md text-secondary">
+                  Couldn&apos;t load the asset list.
+                </span>
+                <Button variant="outline" size="sm" onClick={onRetry}>
+                  Try again
+                </Button>
+              </div>
+            )}
+            {message && (
+              <p role="status" className="px-3 py-3 text-body-md text-muted">
+                {message}
+              </p>
+            )}
+            {results.length > 0 && (
+              <ul id={listId} role="listbox" aria-label="Assets">
+                {results.map((coin, i) => (
+                  <li
+                    key={coin.id}
+                    id={optionId(i)}
+                    role="option"
+                    aria-selected={i === activeIndex}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => pick(coin)}
+                    className="flex cursor-pointer items-center gap-3 px-3 py-2 aria-selected:bg-overlay-hover"
+                  >
+                    <CoinLogo src={coin.image} name={coin.name} size={24} />
+                    <span className="min-w-0 flex-1 truncate text-body-md text-primary">
+                      {coin.name}
+                    </span>
+                    <span className="num text-mono-sm text-muted">{coin.symbol}</span>
+                    <span className="w-10 text-right num text-mono-sm text-muted">
+                      {coin.rank ? `#${coin.rank}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </MotionPopover>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

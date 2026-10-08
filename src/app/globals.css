@@ -191,12 +191,29 @@
   /* Big vertical gaps between sections: 120 / 160 / 200. */
   --section-gap: 7.5rem;
 
+  /* Motion: the only durations UI transitions and animations may use (Tailwind:
+     duration-fast / -base / -slow / -slower; JS: DURATION in lib/motion.ts, keep in
+     step). fast = hover and press, base = most state changes and overlays,
+     slow = entrances and route changes, slower = large moves (theme reveal). */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+
+  /* Changing the theme (the toggle, the T key, the palette): the whole page crosses over from
+     one theme to the other at once. These two settings are all there is to tune.
+       --theme-duration  how long it takes. Longer is softer: 800ms, 1s, 1.5s. 0ms = no animation.
+       --theme-ease      how it moves: ease-in-out (slow at both ends), linear, ease-out,
+                         or a cubic-bezier(...) of your own. */
+  --theme-duration: var(--duration-slower);
+  --theme-ease: ease-in-out;
+
   /* Frosted surface (the command palette): how blurred whatever is behind it looks.
      How see-through it is (--glass-opacity) is set per theme, in the two theme blocks. */
   --glass-blur: 16px;
   /* Hairlines that fade out at both ends (the market stats strip): how much of each
      end fades. 0% = a plain line, 50% = it only shows in the middle. */
-  --line-fade-size: 18%;
+  --line-fade-size: 35px;
 
   /* Heading scale (mobile first): size / line-height / letter-spacing.
      3xl and 2xl follow the spec's mobile sizes (40, 36); xl and lg step down
@@ -297,8 +314,11 @@
   --color-chart-9: var(--chart-9);
   --color-chart-10: var(--chart-10);
 
-  /* Fonts (loaded with next/font in layout.tsx) */
-  --font-sans: var(--font-roboto), system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Fonts (loaded with next/font in layout.tsx). Krub is the text face (the page's
+     default, so every body-* size); Inter is the heading face (every heading-* size and
+     h1-h4); Roboto Mono is for figures and mono labels (.num, .label-mono, mono-*). */
+  --font-sans: var(--font-krub), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono:
     var(--font-roboto-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
@@ -352,14 +372,44 @@
   --shadow-dropdown: 0 4px 16px var(--shadow-dropdown-color);
 
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  /* A spring that overshoots by ~8% and settles (CSS can't do real springs, so it is a
+     sampled curve). For things that should feel physical: a thumb sliding, a pop. */
+  --ease-spring: linear(
+    0,
+    0.132,
+    0.4004,
+    0.6718,
+    0.8808,
+    1.0102,
+    1.0706,
+    1.0833,
+    1.0698,
+    1.0468,
+    1.0247,
+    1.0081,
+    0.9982,
+    0.9938,
+    0.9931,
+    0.9944,
+    0.9964,
+    0.9982,
+    0.9995,
+    1
+  );
+
+  /* duration-fast etc. read the :root tokens above. */
+  --transition-duration-fast: var(--duration-fast);
+  --transition-duration-base: var(--duration-base);
+  --transition-duration-slow: var(--duration-slow);
+  --transition-duration-slower: var(--duration-slower);
 }
 
 @theme {
   --animate-skeleton: skeleton 1.6s var(--ease-standard) infinite;
-  --animate-fade-in: fade-in 0.2s var(--ease-standard);
-  --animate-fade-out: fade-out 0.15s var(--ease-standard) forwards;
-  --animate-sheet-in: sheet-in 0.25s var(--ease-standard);
-  --animate-sheet-out: sheet-out 0.2s var(--ease-standard) forwards;
+  --animate-fade-in: fade-in var(--duration-base) var(--ease-standard);
+  --animate-fade-out: fade-out var(--duration-fast) var(--ease-standard) forwards;
+  --animate-sheet-in: sheet-in var(--duration-slow) var(--ease-standard);
+  --animate-sheet-out: sheet-out var(--duration-base) var(--ease-standard) forwards;
   --animate-marquee: marquee 60s linear infinite;
 
   @keyframes skeleton {
@@ -533,6 +583,128 @@
   }
 }
 
+/* ---- View transitions ------------------------------------------------------
+   The browser snapshots the page before and after a change and animates between the
+   two. React's <ViewTransition> (components/motion/view-transition.tsx) decides what
+   takes part; this is how each kind looks. Timings are the motion tokens. */
+
+/* Clicks go through to the live page while a transition plays. */
+::view-transition {
+  pointer-events: none;
+}
+
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes vt-slide {
+  from {
+    translate: var(--vt-x, 0px) var(--vt-y, 0px);
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+/* The header stays where it is while the page changes under it. */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+/* A route change: the old page leaves quickly, the new one arrives a beat later,
+   rising a few pixels (the .page-fade default) or sliding in from the side when the
+   link says it goes forward (deeper) or back (up). Only one page is visible at a time. */
+::view-transition-old(.page-fade),
+::view-transition-old(.nav-forward),
+::view-transition-old(.nav-back) {
+  animation: vt-fade var(--duration-fast) var(--ease-standard) both reverse;
+}
+::view-transition-new(.page-fade),
+::view-transition-new(.nav-forward),
+::view-transition-new(.nav-back) {
+  animation:
+    vt-fade var(--duration-base) var(--ease-standard) var(--duration-fast) both,
+    vt-slide var(--duration-base) var(--ease-standard) var(--duration-fast) both;
+}
+::view-transition-new(.page-fade) {
+  --vt-y: 8px;
+}
+::view-transition-new(.nav-forward) {
+  --vt-x: 24px;
+}
+::view-transition-new(.nav-back) {
+  --vt-x: -24px;
+}
+
+/* A coin travelling from its row to the asset page header, or back. */
+::view-transition-group(.morph) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-standard);
+}
+
+/* The theme change: the whole page crosses over from one theme to the other at once, as one
+   smooth crossfade of the old picture into the new one (the browser takes both pictures;
+   lib/theme-transition.ts only starts it). How long it takes and how it eases are
+   --theme-duration and --theme-ease at the top of this file. The header takes part like
+   everything else, so it loses its own name for the moment. */
+html[data-vt="theme"] [data-vt-header] {
+  view-transition-name: none !important;
+}
+html[data-vt="theme"]::view-transition-old(root),
+html[data-vt="theme"]::view-transition-new(root) {
+  animation-duration: var(--theme-duration);
+  animation-timing-function: var(--theme-ease);
+}
+/* No View Transitions API: every color fades over the same time instead. */
+html[data-vt="theme-blend"] *,
+html[data-vt="theme-blend"] *::before,
+html[data-vt="theme-blend"] *::after {
+  transition:
+    background-color var(--theme-duration) var(--theme-ease),
+    border-color var(--theme-duration) var(--theme-ease),
+    color var(--theme-duration) var(--theme-ease),
+    fill var(--theme-duration) var(--theme-ease),
+    stroke var(--theme-duration) var(--theme-ease) !important;
+}
+
+/* Reduced motion: crossfades stay, anything that moves goes. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(*) {
+    --vt-x: 0px !important;
+    --vt-y: 0px !important;
+  }
+  ::view-transition-group(.morph) {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Heading face -----------------------------------------------------------
+   A heading size carries its own typeface, so text-heading-* works on a <p> or a <span>
+   as well as on an <h2>. In the components layer on purpose: a utility (.num, font-mono)
+   on the same element still wins, so a price set in a heading size stays Roboto Mono. */
+@layer components {
+  .text-heading-3xl,
+  .text-heading-2xl,
+  .text-heading-xl,
+  .text-heading-lg,
+  .text-heading-md,
+  .text-heading-sm,
+  .text-heading-xs {
+    font-family: var(--font-heading);
+  }
+}
+
 /* ---- Layout utilities ---------------------------------------------------- */
 @utility page-container {
   width: 100%;
@@ -603,6 +775,7 @@
   h2,
   h3,
   h4 {
+    font-family: var(--font-heading);
     font-weight: 400;
     text-wrap: balance;
   }
@@ -634,7 +807,8 @@
   }
 
   /* Honor the OS setting everywhere, including third-party CSS animations.
-     Motion (the library) is handled separately via <MotionConfig>. */
+     Motion (the library) is handled separately via <MotionConfig>, and the View
+     Transitions further down. The rule is: movement goes, fades stay. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -643,6 +817,18 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+    /* A plain fade is not what the setting is about, so overlays still fade in and out... */
+    .animate-fade-in,
+    .animate-fade-out {
+      animation-duration: var(--duration-base) !important;
+    }
+    /* ...and the menu panel, which slides, fades instead. */
+    .animate-sheet-in {
+      animation: fade-in var(--duration-base) var(--ease-standard) !important;
+    }
+    .animate-sheet-out {
+      animation: fade-out var(--duration-fast) var(--ease-standard) forwards !important;
     }
   }
 }
@@ -654,10 +840,10 @@
    and a CSS timer that reveals it after 2.5s if hydration never arrives. */
 [data-count="idle"] {
   opacity: 0;
-  animation: count-failsafe 0.3s var(--ease-standard) 2.5s forwards;
+  animation: count-failsafe var(--duration-slow) var(--ease-standard) 2.5s forwards;
 }
 [data-count="ready"] {
-  transition: opacity 0.25s var(--ease-standard);
+  transition: opacity var(--duration-base) var(--ease-standard);
 }
 @keyframes count-failsafe {
   to {

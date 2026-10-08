@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { COMPARE_STORAGE_KEY, useCompareStore } from "@/stores/compare";
+import { HOTKEYS_STORAGE_KEY, useHotkeysStore } from "@/stores/hotkeys";
 import { WATCHLIST_STORAGE_KEY, useWatchlistStore } from "@/stores/watchlist";
 
 /**
@@ -13,6 +14,7 @@ export function StoreHydrator() {
   useEffect(() => {
     void useWatchlistStore.persist.rehydrate();
     void useCompareStore.persist.rehydrate();
+    void useHotkeysStore.persist.rehydrate();
 
     const onStorage = (event: StorageEvent) => {
       // `key === null` means the whole storage was cleared.
@@ -21,6 +23,9 @@ export function StoreHydrator() {
       }
       if (event.key === COMPARE_STORAGE_KEY || event.key === null) {
         void useCompareStore.persist.rehydrate();
+      }
+      if (event.key === HOTKEYS_STORAGE_KEY || event.key === null) {
+        void useHotkeysStore.persist.rehydrate();
       }
     };
     window.addEventListener("storage", onStorage);

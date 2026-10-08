@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { TweenNumber } from "@/components/motion/tween-number";
 import { directionOf, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +16,14 @@ export function PercentChange({
   value,
   digits = 2,
   showIcon = true,
+  tweenKey,
   className,
 }: {
   value: number | null | undefined;
   digits?: number;
   showIcon?: boolean;
+  /** Count from the old value to the new one whenever this changes (a new range, say). */
+  tweenKey?: string | number;
   className?: string;
 }) {
   if (value == null || !Number.isFinite(value)) {
@@ -44,7 +48,17 @@ export function PercentChange({
       )}
     >
       {showIcon && <Icon className="size-3 shrink-0" aria-hidden="true" />}
-      <span>{formatPercent(value, digits)}</span>
+      <span>
+        {tweenKey === undefined ? (
+          formatPercent(value, digits)
+        ) : (
+          <TweenNumber
+            value={value}
+            format={(n) => formatPercent(n, digits)}
+            tweenKey={tweenKey}
+          />
+        )}
+      </span>
       <span className="sr-only">{LABELS[direction]}</span>
     </span>
   );

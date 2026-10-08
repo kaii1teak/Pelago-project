@@ -34,7 +34,7 @@ export function Tooltip({ content, children, side = "top", className }: TooltipP
           sideOffset={6}
           collisionPadding={12}
           className={cn(
-            "z-50 max-w-64 animate-fade-in rounded-control bg-inverse px-2 py-1 text-body-sm text-inverse shadow-dropdown",
+            "z-50 max-w-64 animate-fade-in rounded-control bg-inverse px-2 py-1 text-body-sm text-inverse shadow-dropdown data-[state=closed]:animate-fade-out",
             className,
           )}
         >

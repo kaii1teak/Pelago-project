@@ -41,7 +41,7 @@ export function SortHeader({
         type="button"
         onClick={() => onSort(sortKey)}
         className={cn(
-          "group -mx-1.5 inline-flex items-center gap-1 rounded-control px-1.5 py-1 label-mono transition-colors duration-150 ease-standard",
+          "group -mx-1.5 inline-flex items-center gap-1 rounded-control px-1.5 py-1 label-mono transition-colors duration-fast ease-standard",
           align === "right" && "flex-row-reverse",
           active ? "text-primary" : "text-muted hover:text-primary",
         )}
@@ -50,7 +50,7 @@ export function SortHeader({
         <Icon
           aria-hidden="true"
           className={cn(
-            "size-3 shrink-0 transition-opacity duration-150 ease-standard",
+            "size-3 shrink-0 transition-opacity duration-fast ease-standard",
             active
               ? "opacity-100"
               : "opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60",

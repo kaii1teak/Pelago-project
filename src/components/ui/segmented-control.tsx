@@ -44,7 +44,7 @@ export function SegmentedControl<T extends string>({
             aria-pressed={active}
             onClick={() => onValueChange(option.value)}
             className={cn(
-              "relative inline-flex h-8 items-center justify-center rounded-control px-3 text-body-md font-medium whitespace-nowrap transition-colors duration-150 ease-standard",
+              "relative inline-flex h-8 items-center justify-center rounded-control px-3 text-body-md font-medium whitespace-nowrap transition-colors duration-fast ease-standard",
               active ? "text-inverse" : "text-secondary hover:text-primary",
             )}
           >

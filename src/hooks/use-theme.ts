@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useSyncExternalStore } from "react";
 import { DEFAULT_THEME, THEME_STORAGE_KEY, type Theme } from "@/lib/theme";
+import { runThemeChange } from "@/lib/theme-transition";
 
 // The `dark` class on <html> is the single source of truth, so CSS, the init
 // script and React all agree. We subscribe to it rather than copying it into
@@ -47,12 +48,12 @@ export function useTheme() {
   }, []);
 
   const setTheme = useCallback((next: Theme) => {
-    apply(next);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       // Private mode / blocked storage: the theme still applies for this visit.
     }
+    runThemeChange(() => apply(next));
   }, []);
 
   const toggleTheme = useCallback(() => {

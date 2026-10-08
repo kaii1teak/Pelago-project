@@ -45,6 +45,7 @@ export function MarketsToolbar({
             ref={inputRef}
             type="search"
             aria-label="Search assets"
+            data-hotkey-search
             placeholder="Search name or symbol"
             icon={<Search />}
             value={search}
@@ -62,7 +63,7 @@ export function MarketsToolbar({
                 // The button unmounts once the box is empty; keep keyboard users where they were.
                 inputRef.current?.focus();
               }}
-              className="absolute top-1/2 right-1 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-control text-muted transition-colors duration-150 ease-standard hover:bg-overlay-hover hover:text-primary"
+              className="absolute top-1/2 right-1 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-control text-muted transition-colors duration-fast ease-standard hover:bg-overlay-hover hover:text-primary active:bg-overlay-pressed"
             >
               <X className="size-4" aria-hidden="true" />
             </button>
@@ -90,10 +91,10 @@ export function MarketsToolbar({
               aria-pressed={active}
               onClick={() => onCategoryChange(c.id)}
               className={cn(
-                "inline-flex h-8 shrink-0 items-center rounded-control border px-3 text-body-md whitespace-nowrap transition-colors duration-150 ease-standard",
+                "inline-flex h-8 shrink-0 items-center rounded-control border px-3 text-body-md whitespace-nowrap transition-colors duration-fast ease-standard",
                 active
                   ? "border-transparent bg-inverse text-inverse"
-                  : "border-primary text-secondary hover:bg-overlay-hover hover:text-primary",
+                  : "border-primary text-secondary hover:bg-overlay-hover hover:text-primary active:bg-overlay-pressed",
               )}
             >
               {c.label}

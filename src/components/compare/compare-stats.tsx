@@ -24,9 +24,9 @@ export type StatsAsset = {
 type Row = {
   id: string;
   label: (range: ChartRange) => string;
-  cell: (asset: StatsAsset & { coin: MarketCoin }) => React.ReactNode;
+  cell: (asset: StatsAsset & { coin: MarketCoin }, range: ChartRange) => React.ReactNode;
   /** Shown instead of the market cell for the range row, which needs no market data. */
-  own?: (asset: StatsAsset) => React.ReactNode;
+  own?: (asset: StatsAsset, range: ChartRange) => React.ReactNode;
 };
 
 const num = "num text-mono-md text-primary";
@@ -35,8 +35,13 @@ const ROWS: readonly Row[] = [
   {
     id: "range",
     label: (range) => `On the chart, ${RANGE_NAME[range]}`,
-    cell: (a) => <PercentChange value={a.change} className="text-mono-sm" />,
-    own: (a) => <PercentChange value={a.change} className="text-mono-sm" />,
+    // The one figure that depends on the range: it counts to its new value when the range changes.
+    cell: (a, range) => (
+      <PercentChange value={a.change} tweenKey={range} className="text-mono-sm" />
+    ),
+    own: (a, range) => (
+      <PercentChange value={a.change} tweenKey={range} className="text-mono-sm" />
+    ),
   },
   {
     id: "price",
@@ -122,7 +127,7 @@ export function CompareStats({
               <th key={asset.id} scope="col" className="px-3 py-4 text-left font-normal">
                 <Link
                   href={`/coin/${asset.id}`}
-                  className="flex min-w-0 items-center gap-2 rounded-control py-1 transition-colors duration-150 ease-standard hover:text-secondary"
+                  className="flex min-w-0 items-center gap-2 rounded-control py-1 transition-colors duration-fast ease-standard hover:text-secondary"
                 >
                   <Swatch color={asset.color} className="h-5 w-1 shrink-0" />
                   <CoinLogo src={asset.image} name={asset.name} size={24} />
@@ -144,9 +149,9 @@ export function CompareStats({
               {assets.map((asset) => (
                 <td key={asset.id} className="px-3">
                   {asset.coin ? (
-                    row.cell({ ...asset, coin: asset.coin })
+                    row.cell({ ...asset, coin: asset.coin }, range)
                   ) : row.own ? (
-                    row.own(asset)
+                    row.own(asset, range)
                   ) : asset.loading ? (
                     <Skeleton className="h-5 w-20" />
                   ) : (

@@ -18,7 +18,7 @@ function Item({ coin }: { coin: MarketCoin }) {
         // Redundant with Trending/Markets, so the strip has no tab stops at all (not 20).
         // Still in the accessibility tree: screen readers can follow them.
         tabIndex={-1}
-        className="flex h-14 items-center gap-3 border-r border-primary px-6 transition-colors duration-150 ease-standard hover:bg-overlay-hover"
+        className="flex h-14 items-center gap-3 border-r border-primary px-6 transition-colors duration-fast ease-standard hover:bg-overlay-hover active:bg-overlay-pressed"
       >
         <CoinLogo src={coin.image} name={coin.name} size={24} />
         <span className="num text-mono-md text-primary">{coin.symbol}</span>

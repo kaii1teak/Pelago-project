@@ -24,6 +24,7 @@ import {
   type ChartScale,
 } from "@/lib/chart";
 import { ZOOM_STEP, isNearStart, zoomLogicalRange } from "@/lib/chart-zoom";
+import { fadeIn } from "@/lib/fade";
 import { formatUsd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { chartOptions } from "./chart-options";
@@ -246,7 +247,9 @@ export default function ChartCanvas({
     if (!chart || !host) return;
     const theme = readChartTheme(host);
 
+    let switched = false;
     if (seriesModeRef.current !== mode) {
+      switched = true;
       if (seriesRef.current) chart.removeSeries(seriesRef.current);
       seriesRef.current =
         mode === "line"
@@ -300,6 +303,8 @@ export default function ChartCanvas({
       chart.timeScale().setVisibleRange(view);
     } else if (!refreshed) {
       interacted.current = false;
+      // A different range, type or reset is a new picture: let it arrive instead of snapping.
+      if (before || switched) fadeIn(host);
       const window = CHART_DAYS[range] * 86_400;
       if (
         mode === "line" &&

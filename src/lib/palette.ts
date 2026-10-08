@@ -1,4 +1,5 @@
 import type { MarketCoin, SearchResult } from "@/lib/api/schemas";
+import type { HotkeyId } from "@/lib/hotkeys/catalog";
 import type { Theme } from "@/lib/theme";
 import type { NavLink } from "@/lib/site";
 
@@ -79,12 +80,15 @@ export type PagePaletteItem = {
   label: string;
   href: string;
   keywords: readonly string[];
+  /** The keyboard shortcut for the same thing, shown beside it. */
+  hotkey?: HotkeyId;
 };
 export type ActionPaletteItem = {
   kind: "action";
-  id: "toggle-theme";
+  id: "toggle-theme" | "show-shortcuts";
   label: string;
   keywords: readonly string[];
+  hotkey?: HotkeyId;
 };
 export type AssetPaletteItem = {
   kind: "asset";
@@ -102,6 +106,13 @@ export type PaletteGroup = {
 
 export const assetHref = (id: string) => `/coin/${encodeURIComponent(id)}`;
 
+const PAGE_HOTKEY: Record<string, HotkeyId> = {
+  "/": "go.home",
+  "/markets": "go.markets",
+  "/watchlist": "go.watchlist",
+  "/compare": "go.compare",
+};
+
 export function pageItems(links: readonly NavLink[]): PagePaletteItem[] {
   return [
     {
@@ -110,6 +121,7 @@ export function pageItems(links: readonly NavLink[]): PagePaletteItem[] {
       label: "Home",
       href: "/",
       keywords: ["start", "landing"],
+      hotkey: PAGE_HOTKEY["/"],
     },
     ...links.map((link): PagePaletteItem => ({
       kind: "page",
@@ -117,6 +129,7 @@ export function pageItems(links: readonly NavLink[]): PagePaletteItem[] {
       label: link.label,
       href: link.href,
       keywords: [],
+      hotkey: PAGE_HOTKEY[link.href],
     })),
   ];
 }
@@ -128,6 +141,17 @@ export function themeItem(theme: Theme): ActionPaletteItem {
     id: "toggle-theme",
     label: `Switch to ${next} theme`,
     keywords: ["theme", "dark", "light", "appearance", "mode", "colors"],
+    hotkey: "theme",
+  };
+}
+
+export function shortcutsItem(): ActionPaletteItem {
+  return {
+    kind: "action",
+    id: "show-shortcuts",
+    label: "Keyboard shortcuts",
+    keywords: ["keys", "hotkeys", "help", "keyboard", "commands", "cheatsheet"],
+    hotkey: "shortcuts",
   };
 }
 
@@ -163,7 +187,7 @@ export function buildGroups({
   /** Shown when nothing is typed. */
   topAssets: readonly PaletteAsset[];
 }): PaletteGroup[] {
-  const action = themeItem(theme);
+  const actions = [themeItem(theme), shortcutsItem()];
   const typed = query !== "";
 
   const groups: PaletteGroup[] = [
@@ -175,7 +199,7 @@ export function buildGroups({
     {
       id: "actions",
       label: "Actions",
-      items: !typed || commandMatches(action, query) ? [action] : [],
+      items: typed ? actions.filter((a) => commandMatches(a, query)) : actions,
     },
     {
       id: "assets",

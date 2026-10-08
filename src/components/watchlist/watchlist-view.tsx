@@ -13,6 +13,8 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { useRequestedIds } from "@/hooks/use-requested-ids";
 import { useMarketsByIds } from "@/lib/api/hooks";
 import { DEFAULT_DIR, sortCoins, type SortDir, type SortKey } from "@/lib/markets-table";
+import { isInert, live } from "@/lib/dom";
+import { ROW } from "@/lib/hotkeys/rows";
 import { matchWatchlist } from "@/lib/watchlist";
 import { useWatchlistHydrated, useWatchlistStore } from "@/stores/watchlist";
 import { MissingAssets } from "./missing-assets";
@@ -74,6 +76,8 @@ export function WatchlistView() {
      remove control instead (or the heading when nothing is left). */
   const root = useRef<HTMLDivElement>(null);
   const focusedAt = useRef(-1);
+  /** Which row had keyboard focus (selected with j / k), or -1: then focus moves to the next ROW, not its star. */
+  const focusedRow = useRef(-1);
   const focusHeading = useRef(false);
   const removable = sorted.length + missing.length;
   const previousRemovable = useRef(removable);
@@ -85,14 +89,19 @@ export function WatchlistView() {
 
     const heading = root.current?.querySelector("h1");
     const active = document.activeElement;
-    const lostFocus = !active || active === document.body;
+    // A row fading out still holds focus until it is gone: that counts as lost.
+    const lostFocus = !active || active === document.body || isInert(active);
     if (!focusHeading.current && !lostFocus) return;
 
-    const controls = [...(root.current?.querySelectorAll<HTMLElement>(REMOVERS) ?? [])];
-    const next =
-      !focusHeading.current && focusedAt.current >= 0
-        ? controls[Math.min(focusedAt.current, controls.length - 1)]
-        : undefined;
+    const controls = live(root.current?.querySelectorAll<HTMLElement>(REMOVERS) ?? []);
+    const rows = live(root.current?.querySelectorAll<HTMLElement>(ROW) ?? []);
+    const next = focusHeading.current
+      ? undefined
+      : focusedRow.current >= 0
+        ? rows[Math.min(focusedRow.current, rows.length - 1)]
+        : focusedAt.current >= 0
+          ? controls[Math.min(focusedAt.current, controls.length - 1)]
+          : undefined;
     focusHeading.current = false;
     if (next) next.focus();
     else if (heading) {
@@ -151,8 +160,10 @@ export function WatchlistView() {
       ref={root}
       className="space-y-10"
       onFocus={(event) => {
-        const controls = [...(root.current?.querySelectorAll(REMOVERS) ?? [])];
+        const controls = live(root.current?.querySelectorAll(REMOVERS) ?? []);
         focusedAt.current = controls.indexOf(event.target as Element);
+        const rows = live(root.current?.querySelectorAll(ROW) ?? []);
+        focusedRow.current = rows.indexOf(event.target as HTMLElement);
       }}
     >
       <SectionHeading

@@ -68,4 +68,6 @@ export const navigationMock = {
     return useMemo(() => new URLSearchParams(search), [search]);
   },
   usePathname: () => window.location.pathname,
+  // Enough for /coin/[id]: the segment after /coin/.
+  useParams: () => ({ id: window.location.pathname.split("/")[2] }),
 };

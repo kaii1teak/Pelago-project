@@ -182,7 +182,7 @@ export default function StyleguidePage() {
       <Section
         index={2}
         title="Typography"
-        description="Roboto for text, Roboto Mono for prices, tickers, numbers and index labels. Headings are weight 400 with strongly negative tracking."
+        description="Inter for headings, Krub for text, Roboto Mono for prices, tickers, numbers and index labels. Headings are weight 400 with strongly negative tracking."
       >
         <div className="space-y-6">
           {HEADINGS.map(([name, cls]) => (
@@ -345,7 +345,7 @@ export default function StyleguidePage() {
           {["Bitcoin", "Ethereum", "Solana"].map((name, i) => (
             <li
               key={name}
-              className="flex h-20 items-center gap-6 border-b border-primary px-2 transition-colors duration-150 ease-standard hover:bg-overlay-hover"
+              className="flex h-20 items-center gap-6 border-b border-primary px-2 transition-colors duration-fast ease-standard hover:bg-overlay-hover active:bg-overlay-pressed"
             >
               <RowIndex n={i + 1} />
               <span className="text-body-lg text-primary">{name}</span>

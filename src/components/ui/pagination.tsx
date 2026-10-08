@@ -30,7 +30,7 @@ export function getPageWindow(page: number, pageCount: number, siblings = 1): Pa
 }
 
 const buttonClass =
-  "inline-flex size-9 items-center justify-center rounded-control text-mono-md font-medium transition-colors duration-150 ease-standard disabled:pointer-events-none disabled:text-disabled";
+  "inline-flex size-9 items-center justify-center rounded-control text-mono-md font-medium transition-colors duration-fast ease-standard disabled:pointer-events-none disabled:text-disabled";
 
 export function Pagination({
   page,
@@ -56,7 +56,7 @@ export function Pagination({
             onClick={() => onPageChange(page - 1)}
             className={cn(
               buttonClass,
-              "text-secondary hover:bg-overlay-hover hover:text-primary",
+              "text-secondary hover:bg-overlay-hover hover:text-primary active:bg-overlay-pressed",
             )}
           >
             <ChevronLeft className="size-4" aria-hidden="true" />
@@ -83,7 +83,7 @@ export function Pagination({
                   "num",
                   item === page
                     ? "bg-inverse text-inverse"
-                    : "text-secondary hover:bg-overlay-hover hover:text-primary",
+                    : "text-secondary hover:bg-overlay-hover hover:text-primary active:bg-overlay-pressed",
                 )}
               >
                 {item}
@@ -100,7 +100,7 @@ export function Pagination({
             onClick={() => onPageChange(page + 1)}
             className={cn(
               buttonClass,
-              "text-secondary hover:bg-overlay-hover hover:text-primary",
+              "text-secondary hover:bg-overlay-hover hover:text-primary active:bg-overlay-pressed",
             )}
           >
             <ChevronRight className="size-4" aria-hidden="true" />

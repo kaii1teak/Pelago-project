@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export const buttonVariants = cva(
   [
     "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap select-none",
-    "rounded-control transition-colors duration-150 ease-standard",
+    "rounded-control transition-colors duration-fast ease-standard",
     "disabled:pointer-events-none disabled:text-disabled aria-disabled:pointer-events-none aria-disabled:text-disabled",
     "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   ],
@@ -24,7 +24,8 @@ export const buttonVariants = cva(
           "bg-btn-secondary font-medium text-primary hover:bg-btn-secondary-hover active:bg-btn-secondary-pressed",
         outline:
           "border border-outline font-medium text-primary hover:border-outline-hover active:border-outline-pressed",
-        ghost: "font-medium text-secondary hover:bg-overlay-subtle hover:text-primary",
+        ghost:
+          "font-medium text-secondary hover:bg-overlay-subtle hover:text-primary active:bg-overlay-pressed",
       },
       size: {
         sm: "h-8 px-2.5 text-body-md",

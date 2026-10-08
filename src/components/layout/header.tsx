@@ -14,7 +14,12 @@ export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 h-16 border-b border-primary bg-primary">
+    <header
+      // Named so a route change leaves it alone (see "View transitions" in globals.css).
+      data-vt-header
+      style={{ viewTransitionName: "site-header" }}
+      className="sticky top-0 z-40 h-16 border-b border-primary bg-primary"
+    >
       <div className="page-container flex h-full items-center justify-between gap-6">
         <div className="flex items-center gap-8">
           <Link href="/" aria-label="Pelago home" className="rounded-control">
@@ -31,7 +36,7 @@ export function Header() {
                       href={link.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "inline-flex h-10 items-center rounded-control text-body-lg transition-colors duration-150 ease-standard",
+                        "inline-flex h-10 items-center rounded-control text-body-lg transition-colors duration-fast ease-standard",
                         active ? "text-primary" : "text-muted hover:text-primary",
                       )}
                     >

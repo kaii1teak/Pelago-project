@@ -41,7 +41,7 @@ export function MobileNav() {
                       href={link.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex h-16 items-center justify-between px-1 text-heading-sm transition-colors duration-150 ease-standard hover:bg-overlay-subtle",
+                        "flex h-16 items-center justify-between px-1 text-heading-sm transition-colors duration-fast ease-standard hover:bg-overlay-subtle",
                         active ? "text-primary" : "text-secondary",
                       )}
                     >

@@ -69,7 +69,7 @@ export const FOOTER_FAN: FanOptions = {
   pointY: 1000,
   reach: 10000,
   sides: "above",
-  sideLines: 26,
+  sideLines: 40,
   sideBow: 260,
   sideOpacity: 0.4,
   // The banner is already full of side lines: nothing needs carrying higher.

@@ -23,6 +23,7 @@ import {
 import type { ChartRange } from "@/lib/chart";
 import type { LinePoint } from "@/lib/chart-data";
 import type { CompareView } from "@/lib/compare";
+import { fadeIn } from "@/lib/fade";
 import { formatPercent, formatUsd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +109,8 @@ export default function CompareCanvas({
   const entries = useRef(new Map<string, Entry>());
   const baseline = useRef<{ api: ISeriesApi<"Line">; line: IPriceLine } | null>(null);
   const shownView = useRef(view);
+  /** What the canvas last showed, as range + view: when it changes, the picture fades in. */
+  const drawn = useRef<string | null>(null);
 
   // Latest props for callbacks created once (the chart's own event handlers).
   const latest = useRef({ range, view, onCrosshair });
@@ -220,6 +223,10 @@ export default function CompareCanvas({
 
     latest.current.onCrosshair(null);
     chart.timeScale().fitContent();
+
+    const picture = `${latest.current.range}|${view}`;
+    if (drawn.current !== null && drawn.current !== picture) fadeIn(host);
+    drawn.current = picture;
   }, [series, view]);
 
   // 3. Time formatting follows the range.

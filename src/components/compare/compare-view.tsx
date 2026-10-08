@@ -3,6 +3,7 @@
 import { GitCompareArrows } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,6 +26,7 @@ import {
   findLateStarter,
   totalReturn,
 } from "@/lib/compare";
+import { live } from "@/lib/dom";
 import { formatDate, formatPercent } from "@/lib/format";
 import { useCompareHydrated, useCompareStore } from "@/stores/compare";
 import { AssetChips, type AssetChipData } from "./asset-chips";
@@ -162,9 +164,10 @@ export function CompareView() {
     const index = focusAfterRemove.current;
     if (index === null) return;
     focusAfterRemove.current = null;
-    const buttons = [
-      ...(root.current?.querySelectorAll<HTMLElement>("[data-chip-remove]") ?? []),
-    ];
+    // The chip that was just removed is still fading out: it doesn't count.
+    const buttons = live(
+      root.current?.querySelectorAll<HTMLElement>("[data-chip-remove]") ?? [],
+    );
     (buttons[Math.min(index, buttons.length - 1)] ?? pickerInput.current)?.focus();
   }, [ids.length]);
 
@@ -233,7 +236,7 @@ export function CompareView() {
     );
   } else {
     panel = (
-      <div role="img" aria-label={chartLabel} className="relative h-chart">
+      <FadeIn role="img" aria-label={chartLabel} className="relative h-chart">
         <CompareLegend
           info={hover}
           entries={assets.flatMap((a) =>
@@ -243,7 +246,7 @@ export function CompareView() {
           view={view}
         />
         <CompareCanvas series={series} range={range} view={view} onCrosshair={setHover} />
-      </div>
+      </FadeIn>
     );
   }
 

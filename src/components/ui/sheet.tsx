@@ -44,7 +44,7 @@ export function SheetContent({
         {children}
         <DialogPrimitive.Close
           aria-label="Close"
-          className="absolute top-3 right-3 inline-flex size-10 items-center justify-center rounded-control text-secondary transition-colors duration-150 hover:bg-overlay-subtle hover:text-primary"
+          className="absolute top-3 right-3 inline-flex size-10 items-center justify-center rounded-control text-secondary transition-colors duration-fast hover:bg-overlay-subtle hover:text-primary"
         >
           <X className="size-6" aria-hidden="true" />
         </DialogPrimitive.Close>

@@ -46,7 +46,7 @@ export function AboutSection({ coin }: { coin: CoinDetail }) {
               aria-expanded={expanded}
               aria-controls={textId}
               onClick={() => setExpanded((e) => !e)}
-              className="decoration-strong text-body-md text-primary underline underline-offset-4 transition-colors duration-150 ease-standard hover:decoration-inherit"
+              className="decoration-strong text-body-md text-primary underline underline-offset-4 transition-colors duration-fast ease-standard hover:decoration-inherit"
             >
               {expanded ? "Show less" : "Read more"}
             </button>

@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import type { MarketCoin } from "@/lib/api/schemas";
 import type { SortDir, SortKey } from "@/lib/markets-table";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ export function MarketsTable({
     <div
       className={cn(
         // relative: keeps the cells' screen-reader-only text inside this scroller.
-        "relative overflow-x-auto transition-opacity duration-250 ease-standard",
+        "relative overflow-x-auto transition-opacity duration-base ease-standard",
         busy && "opacity-60",
       )}
       aria-busy={busy}
@@ -82,9 +83,13 @@ export function MarketsTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((coin) => (
-            <CoinRow key={coin.id} coin={coin} />
-          ))}
+          {/* Rows that leave (a removed star, a narrower search) fade out. Whether a row
+              animates IN is the row's own call (CoinRow): not on the first page of a visit. */}
+          <AnimatePresence>
+            {rows.map((coin, index) => (
+              <CoinRow key={coin.id} coin={coin} index={index} />
+            ))}
+          </AnimatePresence>
         </tbody>
       </table>
     </div>

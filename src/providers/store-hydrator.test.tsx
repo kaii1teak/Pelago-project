@@ -1,6 +1,7 @@
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { COMPARE_STORAGE_KEY, useCompareStore } from "@/stores/compare";
+import { HOTKEYS_STORAGE_KEY, useHotkeysStore } from "@/stores/hotkeys";
 import { WATCHLIST_STORAGE_KEY, useWatchlistStore } from "@/stores/watchlist";
 import { StoreHydrator } from "./store-hydrator";
 
@@ -96,5 +97,31 @@ describe("StoreHydrator: the comparison", () => {
       window.dispatchEvent(new StorageEvent("storage", { key: COMPARE_STORAGE_KEY }));
     });
     expect(useCompareStore.getState().ids).toEqual(["solana"]);
+  });
+});
+
+describe("StoreHydrator: the keyboard shortcuts switch", () => {
+  const saveSwitch = (enabled: boolean) =>
+    localStorage.setItem(
+      HOTKEYS_STORAGE_KEY,
+      JSON.stringify({ state: { enabled }, version: 1 }),
+    );
+  beforeEach(() => useHotkeysStore.setState({ enabled: true }));
+
+  it("reads the saved setting once mounted", async () => {
+    saveSwitch(false);
+    render(<StoreHydrator />);
+    await act(async () => {});
+    expect(useHotkeysStore.getState().enabled).toBe(false);
+  });
+
+  it("follows another tab turning shortcuts off", async () => {
+    render(<StoreHydrator />);
+    await act(async () => {});
+    saveSwitch(false);
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent("storage", { key: HOTKEYS_STORAGE_KEY }));
+    });
+    expect(useHotkeysStore.getState().enabled).toBe(false);
   });
 });
