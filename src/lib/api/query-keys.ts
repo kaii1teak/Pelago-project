@@ -9,6 +9,7 @@ import { normalizeMarketsParams, type MarketsParams } from "./markets-query";
 export const queryKeys = {
   global: ["global"] as const,
   trending: ["trending"] as const,
+  heatmap: (category: string | null = null) => ["heatmap", category] as const,
   search: (query: string) => ["search", query] as const,
   coin: (id: string) => ["coin", id] as const,
   // `back` (1, 2, ...) is the stretch of history before the chart's own window.

@@ -45,3 +45,20 @@ if (typeof window !== "undefined" && !window.matchMedia) {
 
 // jsdom doesn't implement scrolling; components that scroll a target into view need a stub.
 Element.prototype.scrollIntoView ??= () => {};
+
+// jsdom ships a real WebSocket, which would reach out to Binance from any test that shows a
+// live price. This one never opens: tests that want ticks put them in the store directly.
+class InertWebSocket {
+  static readonly OPEN = 1;
+  readyState = 0;
+  onopen = null;
+  onmessage = null;
+  onerror = null;
+  onclose = null;
+  constructor(public url: string) {}
+  send() {}
+  close() {
+    this.readyState = 3;
+  }
+}
+globalThis.WebSocket = InertWebSocket as unknown as typeof WebSocket;

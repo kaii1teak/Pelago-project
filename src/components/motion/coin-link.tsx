@@ -12,10 +12,13 @@ import { NAV_FORWARD } from "./view-transition";
 export function CoinLink({
   coin,
   className,
+  tabIndex,
   children,
 }: {
   coin: Subject;
   className?: string;
+  /** -1 for a copy of a link that sits where the keyboard shouldn't land (a hidden tooltip). */
+  tabIndex?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -33,6 +36,7 @@ export function CoinLink({
         })
       }
       className={className}
+      tabIndex={tabIndex}
     >
       {children}
     </Link>

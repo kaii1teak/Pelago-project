@@ -49,6 +49,7 @@ export const HOTKEYS = [
 
   { id: "go.home", keys: "g h", group: "go", description: "Go to Home" },
   { id: "go.markets", keys: "g m", group: "go", description: "Go to Markets" },
+  { id: "go.heatmap", keys: "g p", group: "go", description: "Go to Heatmap" },
   { id: "go.watchlist", keys: "g w", group: "go", description: "Go to Watchlist" },
   { id: "go.compare", keys: "g c", group: "go", description: "Go to Compare" },
 

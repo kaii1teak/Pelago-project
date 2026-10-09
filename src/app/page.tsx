@@ -1,4 +1,5 @@
 import {HydrationBoundary, dehydrate} from "@tanstack/react-query";
+import {HeatmapPreview} from "@/components/heatmap/heatmap-preview";
 import {Hero} from "@/components/hero/hero";
 import {AssetMarquee} from "@/components/home/asset-marquee";
 import {CtaSection} from "@/components/home/cta-section";
@@ -49,6 +50,9 @@ export default async function HomePage() {
                 </Reveal>
                 <Reveal>
                     <MoversSection/>
+                </Reveal>
+                <Reveal>
+                    <HeatmapPreview/>
                 </Reveal>
             </div>
             {/* No gap around the features on desktop: its vertical rule runs the full height

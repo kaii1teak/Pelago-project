@@ -16,7 +16,7 @@ const lib = vi.hoisted(() => {
     createChart: undefined as unknown as ReturnType<typeof vi.fn>,
   };
   function makeSeries() {
-    return { setData: vi.fn(), applyOptions: vi.fn() };
+    return { setData: vi.fn(), update: vi.fn(), applyOptions: vi.fn() };
   }
   function makeChart() {
     const fitContent = vi.fn();
@@ -792,5 +792,111 @@ describe("ChartCanvas: fading a new picture in", () => {
     animate.mockClear();
     rerenderWith(rerender, onCrosshair, { line: [...line, { time: 300, value: 13 }] });
     expect(animate).not.toHaveBeenCalled();
+  });
+});
+
+describe("ChartCanvas: following the live price", () => {
+  // The test candles sit at seconds 100 and 200, 100 apart: "now" is inside the last one's slot.
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(250_000);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+  const rerenderWith = (
+    rerender: (ui: React.ReactElement) => void,
+    onCrosshair: (info: CrosshairInfo | null) => void,
+    props: Partial<React.ComponentProps<typeof ChartCanvas>>,
+  ) =>
+    rerender(
+      <ChartCanvas
+        mode="line"
+        line={line}
+        candles={[]}
+        range="7d"
+        onCrosshair={onCrosshair}
+        {...props}
+      />,
+    );
+  const updates = () => lib.state.series.at(-1)!.api.update;
+
+  it("does nothing without a live price", () => {
+    setup();
+    expect(updates()).not.toHaveBeenCalled();
+  });
+
+  it("moves the end of the line to the live price, at the last time the history has", () => {
+    const { rerender, onCrosshair } = setup();
+    rerenderWith(rerender, onCrosshair, { live: { price: 13.5 } });
+    expect(updates()).toHaveBeenLastCalledWith({ time: 200, value: 13.5 });
+    rerenderWith(rerender, onCrosshair, { live: { price: 14 } });
+    expect(updates()).toHaveBeenLastCalledWith({ time: 200, value: 14 });
+  });
+
+  it("puts the live price back on the end of the line after the history is replaced", () => {
+    const { rerender, onCrosshair } = setup({ live: { price: 13.5 } });
+    updates().mockClear();
+    rerenderWith(rerender, onCrosshair, {
+      live: { price: 13.5 },
+      line: [...line, { time: 300, value: 12.5 }],
+    });
+    expect(updates()).toHaveBeenLastCalledWith({ time: 300, value: 13.5 });
+  });
+
+  it("stretches the last candle: close follows the price, high and low widen", () => {
+    const { rerender, onCrosshair } = setup({ mode: "candle", candles });
+    rerenderWith(rerender, onCrosshair, {
+      mode: "candle",
+      candles,
+      live: { price: 16, high: 17, low: 10 },
+    });
+    expect(updates()).toHaveBeenLastCalledWith({
+      time: 200,
+      open: 12,
+      high: 17,
+      low: 10,
+      close: 16,
+    });
+  });
+
+  it("remembers a spike: the high does not narrow when the next price is lower", () => {
+    const { rerender, onCrosshair } = setup({ mode: "candle", candles });
+    rerenderWith(rerender, onCrosshair, { mode: "candle", candles, live: { price: 20 } });
+    rerenderWith(rerender, onCrosshair, { mode: "candle", candles, live: { price: 13 } });
+    expect(updates()).toHaveBeenLastCalledWith(
+      expect.objectContaining({ high: 20, close: 13 }),
+    );
+  });
+
+  it("starts the spike over when a new history arrives", () => {
+    const { rerender, onCrosshair } = setup({ mode: "candle", candles });
+    rerenderWith(rerender, onCrosshair, { mode: "candle", candles, live: { price: 20 } });
+    const fresh = candles.map((c) => ({ ...c }));
+    rerenderWith(rerender, onCrosshair, {
+      mode: "candle",
+      candles: fresh,
+      live: { price: 13 },
+    });
+    expect(updates()).toHaveBeenLastCalledWith(
+      expect.objectContaining({ high: 15, close: 13 }),
+    );
+  });
+
+  it("starts a new candle once time has moved past the last one's slot", () => {
+    vi.spyOn(Date, "now").mockReturnValue(330_000); // second 330: the slot from 300
+    const { rerender, onCrosshair } = setup({ mode: "candle", candles });
+    rerenderWith(rerender, onCrosshair, { mode: "candle", candles, live: { price: 12 } });
+    expect(updates()).toHaveBeenLastCalledWith({
+      time: 300,
+      open: 11.5,
+      high: 12,
+      low: 11.5,
+      close: 12,
+    });
+  });
+
+  it("does nothing for an empty history", () => {
+    setup({ line: [], live: { price: 5 } });
+    expect(updates()).not.toHaveBeenCalled();
   });
 });

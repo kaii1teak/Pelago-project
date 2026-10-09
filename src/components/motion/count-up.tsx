@@ -33,7 +33,7 @@ function write(el: HTMLElement, text: string) {
 
 /**
  * Number that counts up the first time it scrolls into view; later live
- * updates swap in instantly. The server renders the final value (so crawlers,
+ * updates count to the new value over a short moment. The server renders the final value (so crawlers,
  * screen readers and no-JS users see real numbers), and CSS holds it back
  * (`data-count="idle"`, see globals.css) until JS can start the count, which
  * avoids a final -> 0 -> count flash on hydration. Screen readers get the final
@@ -70,20 +70,23 @@ export function CountUp({
       el.dataset.count = "ready";
     };
 
-    // Only the first reveal counts up. Live refreshes snap to the new value:
-    // numbers people are reading shouldn't keep moving for style every minute.
-    if (reduceMotion || !first || from === value) {
+    if (reduceMotion || from === value) {
       write(el, fmt(value));
       shown.current = value;
       reveal();
       return;
     }
 
-    write(el, fmt(from));
-    reveal();
+    // The first reveal counts up from zero, slowly. A live refresh afterwards counts from
+    // the number on screen to the new one over a short moment: the figure doesn't jump, and
+    // doesn't keep moving for long either, once a minute.
+    if (first) {
+      write(el, fmt(from));
+      reveal();
+    }
 
     const controls = animate(from, value, {
-      duration,
+      duration: first ? duration : DURATION.slow,
       ease: EASE_STANDARD,
       onUpdate: (v) => {
         shown.current = v;

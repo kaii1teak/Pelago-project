@@ -77,14 +77,34 @@ describe("CountUp", () => {
     expect(animatedText(container)).toHaveTextContent("1,000");
   });
 
-  it("snaps (no new animation) when live data changes afterwards", () => {
+  it("counts from the number on screen to the new one, briefly, when live data changes afterwards", () => {
     const { container, rerender } = render(<CountUp value={1000} format="integer" />);
     options(state.calls[0]!).onComplete();
     expect(state.calls).toHaveLength(1);
+    expect(state.calls[0]![2]).toMatchObject({ duration: 1.2 }); // the first reveal is slow
 
     rerender(<CountUp value={1200} format="integer" />);
-    expect(state.calls).toHaveLength(1); // still just the first reveal
+    expect(state.calls).toHaveLength(2);
+    expect(state.calls[1]!.slice(0, 2)).toEqual([1000, 1200]);
+    expect(state.calls[1]![2]).toMatchObject({ duration: 0.3 }); // an update is quick
+    options(state.calls[1]!).onUpdate(1100);
+    expect(animatedText(container)).toHaveTextContent("1,100");
+    options(state.calls[1]!).onComplete();
     expect(animatedText(container)).toHaveTextContent("1,200");
+  });
+
+  it("an update that arrives mid-count continues from where the number is", () => {
+    const { rerender } = render(<CountUp value={1000} format="integer" />);
+    options(state.calls[0]!).onUpdate(400); // halfway through the first reveal
+    rerender(<CountUp value={1200} format="integer" />);
+    expect(state.calls[1]!.slice(0, 2)).toEqual([400, 1200]);
+  });
+
+  it("does not animate an update that changes nothing", () => {
+    const { rerender } = render(<CountUp value={1000} format="integer" />);
+    options(state.calls[0]!).onComplete();
+    rerender(<CountUp value={1000} format="integer" />);
+    expect(state.calls).toHaveLength(1);
   });
 
   it("never animates for reduced-motion users", () => {

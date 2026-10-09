@@ -4,6 +4,7 @@ import { motion, useIsPresent, useReducedMotion } from "motion/react";
 import { memo, useState } from "react";
 import { Sparkline } from "@/components/charts/sparkline";
 import { CoinLink } from "@/components/motion/coin-link";
+import { LiveChange, LivePrice } from "@/components/live/live-price";
 import { SharedCoin } from "@/components/motion/shared-coin";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { PercentChange } from "@/components/ui/percent-change";
@@ -88,14 +89,14 @@ export const CoinRow = memo(function CoinRow({
       </td>
       <td className="px-3 text-right">
         <SharedCoin id={coin.id} part="price">
-          <Price value={coin.price} className="text-mono-md text-primary" />
+          <LivePrice coin={coin} className="text-mono-md text-primary" />
         </SharedCoin>
       </td>
       <td className="hidden px-3 text-right lg:table-cell">
         <PercentChange value={coin.change1h} className="text-mono-sm" />
       </td>
       <td className="px-3 text-right">
-        <PercentChange value={coin.change24h} className="text-mono-sm" />
+        <LiveChange coin={coin} className="text-mono-sm" />
       </td>
       <td className="hidden px-3 text-right md:table-cell">
         <PercentChange value={coin.change7d} className="text-mono-sm" />

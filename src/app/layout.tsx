@@ -6,7 +6,9 @@ import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SITE } from "@/lib/site";
 import { THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
+import { TickerTape } from "@/components/live/ticker-tape";
 import { HotkeysProvider } from "@/providers/hotkeys-provider";
+import { LiveProvider } from "@/providers/live-provider";
 import { MotionProvider } from "@/providers/motion-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { StoreHydrator } from "@/providers/store-hydrator";
@@ -86,7 +88,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <StoreHydrator />
               <CommandPalette />
               <HotkeysProvider />
+              <LiveProvider />
               <Header />
+              <TickerTape />
               <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
                 {children}
               </main>

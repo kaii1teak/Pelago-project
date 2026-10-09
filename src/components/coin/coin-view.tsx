@@ -52,7 +52,13 @@ export function CoinView({ id }: { id: string }) {
   return (
     <FadeIn className="space-y-20 md:space-y-28">
       <PriceHeader coin={coin} />
-      <PriceChart id={coin.id} name={coin.name} />
+      <PriceChart
+        id={coin.id}
+        name={coin.name}
+        symbol={coin.symbol}
+        rank={coin.rank}
+        price={coin.market.price}
+      />
       <KeyStats coin={coin} />
       <AboutSection coin={coin} />
       <CoinLinks coin={coin} />

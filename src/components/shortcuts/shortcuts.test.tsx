@@ -74,6 +74,7 @@ describe("going places: g, then a letter", () => {
   it.each([
     ["h", "/"],
     ["m", "/markets"],
+    ["p", "/heatmap"],
     ["w", "/watchlist"],
     ["c", "/compare"],
   ])("g %s goes to %s", (second, path) => {
@@ -99,6 +100,7 @@ describe("going places: g, then a letter", () => {
     for (const label of [
       "Go to Home",
       "Go to Markets",
+      "Go to Heatmap",
       "Go to Watchlist",
       "Go to Compare",
     ]) {

@@ -118,3 +118,75 @@ export function priceMinMove(price: number) {
   // Built from a literal: 10 ** -4 is 0.00009999999999999999 in JS floating point.
   return Number(`1e-${priceDigits(price)}`);
 }
+
+/* ---- live prices ---------------------------------------------------------- */
+
+/** What the live feed says right now, in the chart's terms (seconds). */
+export type LiveSample = {
+  price: number;
+  /** The high and low of the streamed current minute: a spike between two prices must not be lost. */
+  high?: number;
+  low?: number;
+  /** When it was seen, in seconds. */
+  time: number;
+};
+
+/** The point to draw at the end of a line: the latest time the history has, at the live price. */
+export function liveLinePoint(
+  line: readonly LinePoint[],
+  sample: Pick<LiveSample, "price">,
+): LinePoint | null {
+  const last = line.at(-1);
+  return last ? { time: last.time, value: sample.price } : null;
+}
+
+/** The length of one candle in seconds, read off the history itself (what the data says beats a table by range). */
+export function candlePeriod(candles: readonly Candle[]): number | null {
+  if (candles.length < 2) return null;
+  const gap = candles[candles.length - 1]!.time - candles[candles.length - 2]!.time;
+  return gap > 0 ? gap : null;
+}
+
+/**
+ * The candle to draw now, given the history, the live candle built so far (null at the start
+ * or after the history changed) and what the feed just said. While the sample is inside the
+ * last candle's time slot it is that candle, stretched: the close follows the price, and the
+ * high and low widen to include it. Once the sample is past the slot, a new candle begins
+ * at the slot it falls in, opening where the one before closed. Highs and lows only ever
+ * widen within a slot, so a spike is not lost when the next price comes in.
+ */
+export function nextLiveCandle(
+  history: readonly Candle[],
+  current: Candle | null,
+  sample: LiveSample,
+): Candle | null {
+  const last = history.at(-1);
+  if (!last) return null;
+  const period = candlePeriod(history);
+
+  let slot = last.time;
+  if (period && sample.time >= last.time + period) {
+    slot = last.time + period * Math.floor((sample.time - last.time) / period);
+  }
+
+  const start: Candle =
+    current && current.time === slot
+      ? current
+      : slot === last.time
+        ? last
+        : {
+            time: slot,
+            open: current?.close ?? last.close,
+            high: current?.close ?? last.close,
+            low: current?.close ?? last.close,
+            close: current?.close ?? last.close,
+          };
+
+  return {
+    time: slot,
+    open: start.open,
+    high: Math.max(start.high, sample.price, sample.high ?? sample.price),
+    low: Math.min(start.low, sample.price, sample.low ?? sample.price),
+    close: sample.price,
+  };
+}

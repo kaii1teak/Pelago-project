@@ -16,7 +16,7 @@ import {
 } from "lightweight-charts";
 import { useEffect, useRef } from "react";
 import type { Candle, LinePoint } from "@/lib/chart-data";
-import { priceMinMove } from "@/lib/chart-data";
+import { liveLinePoint, nextLiveCandle, priceMinMove } from "@/lib/chart-data";
 import {
   CHART_DAYS,
   type ChartMode,
@@ -94,6 +94,7 @@ export default function ChartCanvas({
   onNearStart,
   resetKey = 0,
   controlsRef,
+  live = null,
 }: {
   mode: ChartMode;
   line: readonly LinePoint[];
@@ -109,6 +110,8 @@ export default function ChartCanvas({
   /** Bump to jump back to the latest window of the timeframe. */
   resetKey?: number;
   controlsRef?: React.RefObject<ChartControls | null>;
+  /** The live feed's price (and the high and low of its current minute): the end of the chart follows it. */
+  live?: { price: number; high?: number; low?: number } | null;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -118,6 +121,11 @@ export default function ChartCanvas({
   const loaded = useRef<{ first: number; key: string } | null>(null);
   /** The user has dragged, zoomed or scrolled: only then may reaching the start load more. */
   const interacted = useRef(false);
+  /** The candle being built from live prices, and the history it was built on. */
+  const liveBar = useRef<{ base: readonly Candle[]; bar: Candle | null }>({
+    base: [],
+    bar: null,
+  });
 
   // Latest props for callbacks created once (the chart's own event handlers).
   const latest = useRef({ mode, range, onCrosshair, hasMore, onNearStart, line });
@@ -323,7 +331,39 @@ export default function ChartCanvas({
     if (first !== undefined) loaded.current = { first, key };
   }, [mode, line, candles, range, resetKey]);
 
-  // 3. Time formatting follows the range; the left edge is free while there is more history.
+  // 3. The live price: the last point of the line, or the last candle, follows the feed. It is
+  // applied again whenever the history is replaced (a poll, older data), which would otherwise
+  // set the end of the chart back to a minutes-old price for a second.
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series || !live) return;
+    if (mode === "line") {
+      const point = liveLinePoint(line, live);
+      if (point) {
+        (series as ISeriesApi<"Line">).update({
+          time: asTime(point.time),
+          value: point.value,
+        });
+      }
+      return;
+    }
+    if (liveBar.current.base !== candles) liveBar.current = { base: candles, bar: null };
+    const bar = nextLiveCandle(candles, liveBar.current.bar, {
+      ...live,
+      time: Math.floor(Date.now() / 1000),
+    });
+    if (!bar) return;
+    liveBar.current.bar = bar;
+    (series as ISeriesApi<"Candlestick">).update({
+      time: asTime(bar.time),
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+    });
+  }, [live, mode, line, candles]);
+
+  // 4. Time formatting follows the range; the left edge is free while there is more history.
   useEffect(() => {
     const chart = chartRef.current;
     const host = hostRef.current;
@@ -331,7 +371,7 @@ export default function ChartCanvas({
       chart.applyOptions(chartOptions(readChartTheme(host), range, !hasMore));
   }, [range, hasMore]);
 
-  // 4. Price axis in dollars, or as percent change from the first bar on screen.
+  // 5. Price axis in dollars, or as percent change from the first bar on screen.
   useEffect(() => {
     chartRef.current?.priceScale("right").applyOptions({
       mode:

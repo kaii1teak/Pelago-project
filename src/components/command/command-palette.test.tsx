@@ -255,7 +255,7 @@ describe("CommandPalette: what it shows", () => {
     await openPalette();
     expect(
       within(screen.getByRole("group", { name: "Pages" })).getAllByRole("option"),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
     expect(screen.getByRole("option", { name: /Switch to dark theme/ })).toBeVisible();
     const top = within(screen.getByRole("group", { name: "Top assets" })).getAllByRole(
       "option",

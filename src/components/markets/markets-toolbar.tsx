@@ -2,12 +2,11 @@
 
 import { Search, X } from "lucide-react";
 import { useRef } from "react";
+import { CategoryChips } from "@/components/ui/category-chips";
 import { Input } from "@/components/ui/input";
 import { LiveBadge } from "@/components/ui/live-badge";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { CATEGORIES } from "@/lib/categories";
 import type { MoversView } from "@/lib/markets-table";
-import { cn } from "@/lib/utils";
 
 const VIEW_OPTIONS = [
   { value: "all", label: "All" },
@@ -77,31 +76,7 @@ export function MarketsToolbar({
         />
       </div>
 
-      <div
-        role="group"
-        aria-label="Category"
-        className="-mx-5 flex [scrollbar-width:none] gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
-      >
-        {[{ id: null, label: "All assets" }, ...CATEGORIES].map((c) => {
-          const active = c.id === category;
-          return (
-            <button
-              key={c.id ?? "all"}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onCategoryChange(c.id)}
-              className={cn(
-                "inline-flex h-8 shrink-0 items-center rounded-control border px-3 text-body-md whitespace-nowrap transition-colors duration-fast ease-standard",
-                active
-                  ? "border-transparent bg-inverse text-inverse"
-                  : "border-primary text-secondary hover:bg-overlay-hover hover:text-primary active:bg-overlay-pressed",
-              )}
-            >
-              {c.label}
-            </button>
-          );
-        })}
-      </div>
+      <CategoryChips category={category} onCategoryChange={onCategoryChange} />
 
       {offline && <LiveBadge status="offline" />}
     </div>

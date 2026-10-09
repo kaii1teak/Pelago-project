@@ -125,10 +125,17 @@ describe("commands", () => {
     expect(pages.map((p) => p.label)).toEqual([
       "Home",
       "Markets",
+      "Heatmap",
       "Watchlist",
       "Compare",
     ]);
-    expect(pages.map((p) => p.href)).toEqual(["/", "/markets", "/watchlist", "/compare"]);
+    expect(pages.map((p) => p.href)).toEqual([
+      "/",
+      "/markets",
+      "/heatmap",
+      "/watchlist",
+      "/compare",
+    ]);
   });
 
   it("offers the theme the page is not in", () => {
@@ -140,6 +147,7 @@ describe("commands", () => {
     expect(pages.map((p) => p.hotkey)).toEqual([
       "go.home",
       "go.markets",
+      "go.heatmap",
       "go.watchlist",
       "go.compare",
     ]);
@@ -222,6 +230,7 @@ describe("buildGroups", () => {
   it("flattens in on-screen order, with a unique key per item", () => {
     const flat = flattenGroups(buildGroups({ ...base, query: "" }));
     expect(flat.map((i) => i.kind)).toEqual([
+      "page",
       "page",
       "page",
       "page",

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dispatcher } from "@/hooks/use-hotkey";
 import { queryKeys } from "@/lib/api/query-keys";
+import { liveConnection, liveStore } from "@/lib/live/client";
 import { installHistoryMock, uninstallHistoryMock } from "@/test/navigation";
 import { renderWithClient } from "@/test/render";
 import { PriceChart } from "./price-chart";
@@ -28,6 +29,7 @@ vi.mock("next/dynamic", () => ({
       scale: string;
       hasMore: boolean;
       resetKey: number;
+      live?: unknown;
       onNearStart?: () => void;
       controlsRef?: { current: unknown };
     }) {
@@ -44,6 +46,7 @@ vi.mock("next/dynamic", () => ({
           data-scale={props.scale}
           data-has-more={String(props.hasMore)}
           data-reset={props.resetKey}
+          data-live={JSON.stringify(props.live ?? null)}
         >
           <button type="button" onClick={props.onNearStart}>
             simulate scrolling to the start
@@ -583,5 +586,66 @@ describe("PriceChart: keyboard", () => {
     key("3");
     key("c");
     expect(search()).toBe("");
+  });
+});
+
+describe("PriceChart: live prices", () => {
+  const live = () => JSON.parse(chart().getAttribute("data-live")!);
+  const renderLive = (props: {
+    symbol?: string;
+    rank?: number | null;
+    price?: number | null;
+  }) => {
+    window.history.replaceState(null, "", "/coin/bitcoin");
+    return renderWithClient(
+      <PriceChart id="bitcoin" name="Bitcoin" {...props} />,
+      (client) => {
+        client.setQueryData(queryKeys.coinChart("bitcoin", "7d"), line);
+      },
+    );
+  };
+  const tick = (symbol: string, price: number) =>
+    act(() => liveStore.applyTicks(new Map([[symbol, { price, time: 1 }]])));
+
+  beforeEach(() => liveStore.clearData());
+  afterEach(() => vi.restoreAllMocks());
+
+  it("hands the canvas no live price until the feed has one", () => {
+    renderLive({ symbol: "BTC", rank: 1, price: 100 });
+    expect(live()).toBeNull();
+  });
+
+  it("hands it the live price once one arrives", () => {
+    renderLive({ symbol: "BTC", rank: 1, price: 100 });
+    tick("BTCUSDT", 104);
+    expect(live()).toMatchObject({ price: 104 });
+  });
+
+  it("ignores a price far from the polled one (another coin with the same ticker)", () => {
+    renderLive({ symbol: "BTC", rank: 1, price: 100 });
+    tick("BTCUSDT", 5);
+    expect(live()).toBeNull();
+  });
+
+  it("is not live at all without the coin's ticker", () => {
+    renderLive({});
+    tick("BTCUSDT", 104);
+    expect(live()).toBeNull();
+  });
+
+  it("asks for the one-minute candle only after a live price has come, and carries its high and low", () => {
+    const watch = vi.spyOn(liveConnection, "watchKline").mockReturnValue(() => {});
+    renderLive({ symbol: "BTC", rank: 1, price: 100 });
+    expect(watch).not.toHaveBeenCalled();
+    tick("BTCUSDT", 104);
+    expect(watch).toHaveBeenCalledWith("BTCUSDT");
+    act(() =>
+      liveStore.applyKlines(
+        new Map([
+          ["BTCUSDT", { openTime: 1, open: 100, high: 108, low: 99, close: 104 }],
+        ]),
+      ),
+    );
+    expect(live()).toEqual({ price: 104, high: 108, low: 99 });
   });
 });

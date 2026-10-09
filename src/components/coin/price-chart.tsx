@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Minus, Plus, RotateCcw } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -16,6 +16,8 @@ import { HotkeyTip } from "@/components/shortcuts/hotkey-tip";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { HotkeyId } from "@/lib/hotkeys/catalog";
 import { useHotkey } from "@/hooks/use-hotkey";
+import { useLiveCoin, useLiveKline } from "@/hooks/use-live";
+import { liveSymbol } from "@/lib/live/symbols";
 import { useCoinChartHistory, useCoinOhlc } from "@/lib/api/hooks";
 import {
   CHART_RANGES,
@@ -123,7 +125,20 @@ const RANGE_HOTKEY = {
 } as const satisfies Record<ChartRange, HotkeyId>;
 const RANGE_KEY = { "24h": "1", "7d": "2", "30d": "3", "1y": "4" } as const;
 
-export function PriceChart({ id, name }: { id: string; name: string }) {
+export function PriceChart({
+  id,
+  name,
+  symbol,
+  rank = null,
+  price = null,
+}: {
+  id: string;
+  name: string;
+  /** With the ticker, the rank and the last polled price, the end of the chart follows the live feed. */
+  symbol?: string;
+  rank?: number | null;
+  price?: number | null;
+}) {
   const { range, mode, scale, setRange, setMode, setScale } = useChartUrlState();
   // The line chart can be scrolled back through time: `history` holds the timeframe's own
   // window plus every older stretch loaded since. Candles have no older data to offer.
@@ -133,6 +148,18 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
   const [hover, setHover] = useState<CrosshairInfo | null>(null);
   const controls = useRef<ChartControls | null>(null);
   const [resetKey, setResetKey] = useState(0);
+
+  // The live feed: its price, and (once a price has come, so only for a symbol that exists) the
+  // high and low of its current minute, so the last bar can't miss a spike between two prices.
+  const feed = useLiveCoin({ symbol: symbol ?? "", rank, price });
+  const kline = useLiveKline(feed.live && symbol ? liveSymbol(symbol, rank) : null);
+  const liveBar = useMemo(
+    () =>
+      feed.live && feed.price != null
+        ? { price: feed.price, high: kline?.high, low: kline?.low }
+        : null,
+    [feed.live, feed.price, kline?.high, kline?.low],
+  );
 
   /** Back to the latest window of the timeframe, dropping any older history. */
   const showLatest = () => {
@@ -228,6 +255,7 @@ export function PriceChart({ id, name }: { id: string; name: string }) {
           onNearStart={history.loadOlder}
           resetKey={resetKey}
           controlsRef={controls}
+          live={liveBar}
         />
       </div>
     );

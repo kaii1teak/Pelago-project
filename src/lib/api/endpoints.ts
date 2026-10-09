@@ -1,10 +1,11 @@
 import "server-only";
 import { cgFetch } from "./coingecko";
-import type { MarketsParams } from "./markets-query";
+import { HEATMAP_COUNT, type MarketsParams } from "./markets-query";
 import { CHART_DAYS, historyWindow, type ChartRange } from "@/lib/chart";
 import {
   coinDetailSchema,
   globalStatsSchema,
+  heatmapSchema,
   marketsSchema,
   ohlcSchema,
   priceChartSchema,
@@ -20,6 +21,7 @@ import {
 export const REVALIDATE = {
   global: 120,
   markets: 60,
+  heatmap: 60,
   trending: 300,
   coin: 120,
   search: 300,
@@ -58,6 +60,27 @@ export function getMarkets({
     },
     revalidate: REVALIDATE.markets,
     tags: ["markets"],
+  });
+}
+
+/**
+ * The heatmap's one request: the biggest universe it can show (the smaller ones are slices
+ * of it), without sparklines. Keyed by category alone, so every universe, period and size
+ * shares one upstream call.
+ */
+export function getHeatmap(category?: string) {
+  return cgFetch("/coins/markets", heatmapSchema, {
+    params: {
+      vs_currency: "usd",
+      order: "market_cap_desc",
+      per_page: HEATMAP_COUNT,
+      page: 1,
+      sparkline: false,
+      price_change_percentage: "1h,24h,7d",
+      category,
+    },
+    revalidate: REVALIDATE.heatmap,
+    tags: ["heatmap"],
   });
 }
 

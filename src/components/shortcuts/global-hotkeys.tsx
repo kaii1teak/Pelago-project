@@ -39,6 +39,7 @@ export function GlobalHotkeys() {
 
   useHotkey("go.home", () => router.push("/"));
   useHotkey("go.markets", () => router.push("/markets"));
+  useHotkey("go.heatmap", () => router.push("/heatmap"));
   useHotkey("go.watchlist", () => router.push("/watchlist"));
   useHotkey("go.compare", () => router.push("/compare"));
 

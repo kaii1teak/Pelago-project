@@ -19,6 +19,7 @@ export type NavLink = {
 
 export const NAV_LINKS: NavLink[] = [
   { href: "/markets", label: "Markets", matches: ["/coin"] },
+  { href: "/heatmap", label: "Heatmap" },
   { href: "/watchlist", label: "Watchlist" },
   { href: "/compare", label: "Compare" },
 ];

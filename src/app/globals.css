@@ -205,8 +205,8 @@
        --theme-duration  how long it takes. Longer is softer: 800ms, 1s, 1.5s. 0ms = no animation.
        --theme-ease      how it moves: ease-in-out (slow at both ends), linear, ease-out,
                          or a cubic-bezier(...) of your own. */
-  --theme-duration: var(--duration-slower);
-  --theme-ease: ease-in-out;
+  --theme-duration: var(--duration-slow);
+  --theme-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Frosted surface (the command palette): how blurred whatever is behind it looks.
      How see-through it is (--glass-opacity) is set per theme, in the two theme blocks. */
@@ -233,6 +233,20 @@
 
   /* Asset price chart height. */
   --chart-h: 20rem;
+
+  /* Heatmap fills: how far a price moved, as the success / critical color mixed into the page
+     color, three steps each way (the thresholds are in lib/heatmap.ts). They are built from
+     the theme's own colors, so one set serves both themes. The strongest step is as strong as
+     the labels allow: text-primary stays at 4.5:1 or better on every fill, which a test in
+     heatmap-tokens.test.ts checks. flat = barely moved, none = no number to go by. */
+  --heat-up-1: color-mix(in srgb, var(--success) 16%, var(--bg-primary));
+  --heat-up-2: color-mix(in srgb, var(--success) 36%, var(--bg-primary));
+  --heat-up-3: color-mix(in srgb, var(--success) 58%, var(--bg-primary));
+  --heat-down-1: color-mix(in srgb, var(--critical) 16%, var(--bg-primary));
+  --heat-down-2: color-mix(in srgb, var(--critical) 36%, var(--bg-primary));
+  --heat-down-3: color-mix(in srgb, var(--critical) 58%, var(--bg-primary));
+  --heat-flat: var(--bg-tertiary);
+  --heat-none: var(--bg-subtle);
 }
 
 @media (min-width: 48rem) {
@@ -703,6 +717,185 @@ html[data-vt="theme-blend"] *::after {
   .text-heading-xs {
     font-family: var(--font-heading);
   }
+}
+
+/* ---- Price flash -------------------------------------------------------------
+   A price that just changed flashes the success or critical tint and fades out over the
+   slowest step of the scale (components/live/flash.ts sets data-flash on the element).
+   The tint is a layer over the price (::after) whose OPACITY fades, not a background
+   color that is repainted every frame: with a hundred rows flashing every second the
+   browser fades a layer on the graphics card instead, and scrolling stays smooth.
+   There are two identical animations, a and b: switching between them restarts the flash
+   when two changes come in a row. The global reduced-motion rule cuts them to nothing, so
+   with that setting on the number still updates but does not flash. */
+@keyframes flash-a {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes flash-b {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+[data-flash] {
+  position: relative;
+}
+[data-flash]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+[data-flash^="up"]::after {
+  background-color: var(--success-tint);
+}
+[data-flash^="down"]::after {
+  background-color: var(--critical-tint);
+}
+[data-flash$="-a"]::after {
+  animation: flash-a var(--duration-slower) var(--ease-standard);
+}
+[data-flash$="-b"]::after {
+  animation: flash-b var(--duration-slower) var(--ease-standard);
+}
+
+/* ---- Heatmap ---------------------------------------------------------------
+   The treemap is an SVG sized to its frame. The frame's height is decided here, from the
+   width of the box around it (cqw), so the page does not move when the cells arrive: wide
+   screens get a landscape picture, phones a tall one (--heat-tall = height / width, set by
+   the view because more assets need more room). A cell is a <g> moved by transform and a
+   <rect> resized by width and height, so a change of period, size or data slides and grows
+   the cells to their new places instead of jumping. While the window is being resized
+   (data-resizing, set by the treemap) that is switched off: cells follow the edge at once. */
+.heat-box {
+  container-type: inline-size;
+}
+.heat-frame {
+  height: clamp(26rem, 56cqw, 45rem);
+}
+@container (max-width: 40rem) {
+  .heat-frame {
+    /* Capped: a wide-ish box (a small tablet held upright) would otherwise get a picture
+       several screens tall. */
+    height: min(calc(100cqw * var(--heat-tall, 2)), 80rem);
+  }
+}
+.heat-frame[data-density="compact"] {
+  height: clamp(15rem, 30cqw, 22rem);
+}
+@container (max-width: 40rem) {
+  .heat-frame[data-density="compact"] {
+    height: calc(100cqw * 1.15);
+  }
+}
+
+.heat-cell {
+  transition: transform var(--duration-slow) var(--ease-standard);
+}
+.heat-rect {
+  transition:
+    width var(--duration-slow) var(--ease-standard),
+    height var(--duration-slow) var(--ease-standard),
+    fill var(--duration-slow) var(--ease-standard);
+}
+[data-resizing] .heat-cell,
+[data-resizing] .heat-rect {
+  transition: none;
+}
+
+/* Cells are links: no default outline (it would be drawn around a box that changes size);
+   the focus ring is two rects of the cell itself, an outer one in the page color so the
+   inner blue ring reads on any fill. */
+.heat-link {
+  outline: none;
+  cursor: pointer;
+}
+.heat-hover,
+.heat-ring {
+  fill: none;
+  opacity: 0;
+  pointer-events: none;
+}
+.heat-hover {
+  fill: var(--overlay-hover);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+.heat-link:hover .heat-hover {
+  opacity: 1;
+}
+.heat-link:focus-visible .heat-ring {
+  opacity: 1;
+}
+.heat-ring-outer {
+  stroke: var(--bg-primary);
+  stroke-width: 5;
+}
+.heat-ring-inner {
+  stroke: var(--info);
+  stroke-width: 2;
+}
+
+.heat-label {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  fill: var(--text-primary);
+  pointer-events: none;
+  user-select: none;
+  animation: heat-label-in var(--duration-base) var(--ease-standard);
+}
+@keyframes heat-label-in {
+  from {
+    opacity: 0;
+  }
+}
+.heat-label[data-line="ticker"] {
+  font-weight: 600;
+}
+
+/* A live price tick on a cell: a layer over the fill that fades out (opacity, like the price
+   flash, but softer: a screen full of cells flashing every second must stay calm). Set by
+   components/live/flash.ts, which alternates a and b so two ticks in a row both show. */
+.heat-flash {
+  fill: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+.heat-flash[data-flash^="up"] {
+  fill: var(--success);
+}
+.heat-flash[data-flash^="down"] {
+  fill: var(--critical);
+}
+@keyframes heat-flash-a {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes heat-flash-b {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.heat-flash[data-flash$="-a"] {
+  animation: heat-flash-a var(--duration-slower) var(--ease-standard);
+}
+.heat-flash[data-flash$="-b"] {
+  animation: heat-flash-b var(--duration-slower) var(--ease-standard);
 }
 
 /* ---- Layout utilities ---------------------------------------------------- */

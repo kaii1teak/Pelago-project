@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { LiveChange, LivePrice } from "@/components/live/live-price";
 import { CoinLogo } from "@/components/ui/coin-logo";
-import { PercentChange } from "@/components/ui/percent-change";
-import { Price } from "@/components/ui/price";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMarkets } from "@/lib/api/hooks";
 import type { MarketCoin } from "@/lib/api/schemas";
@@ -22,8 +21,8 @@ function Item({ coin }: { coin: MarketCoin }) {
       >
         <CoinLogo src={coin.image} name={coin.name} size={24} />
         <span className="num text-mono-md text-primary">{coin.symbol}</span>
-        <Price value={coin.price} className="text-mono-md text-secondary" />
-        <PercentChange value={coin.change24h} className="text-mono-sm" />
+        <LivePrice coin={coin} className="text-mono-md text-secondary" />
+        <LiveChange coin={coin} className="text-mono-sm" />
       </Link>
     </li>
   );

@@ -144,9 +144,23 @@ describe("the two settings in globals.css", () => {
     expect(css).toMatch(/--theme-ease:\s*[^;]+;/);
   });
 
-  it("is a smooth half-second by default, on the scale's slowest step", () => {
-    expect(css).toMatch(/--theme-duration:\s*var\(--duration-slower\);/);
-    expect(css).toMatch(/--theme-ease:\s*ease-in-out;/);
+  it("take their values from the motion scale (or a plain time), and an easing", () => {
+    expect(css).toMatch(
+      /--theme-duration:\s*(var\(--duration-(fast|base|slow|slower)\)|\d*\.?\d+m?s);/,
+    );
+    expect(css).toMatch(
+      /--theme-ease:\s*(ease|ease-in|ease-out|ease-in-out|linear|cubic-bezier\([^)]*\));/,
+    );
+  });
+
+  it("each ends where it should: neither swallows the setting that follows it (a missing ; once did)", () => {
+    const duration = css.match(/--theme-duration:([^;]*);/)![1]!;
+    const ease = css.match(/--theme-ease:([^;]*);/)![1]!;
+    for (const value of [duration, ease]) {
+      // A swallowed declaration brings a ":" (and the comment before it) into the value.
+      expect(value).not.toMatch(/:|\/\*/);
+    }
+    expect(css).toMatch(/\n\s*--glass-blur:\s*\d+px;/);
   });
 
   it("the crossfade of the page uses both", () => {

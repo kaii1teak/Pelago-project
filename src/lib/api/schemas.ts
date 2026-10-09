@@ -94,6 +94,43 @@ export type MarketCoin = z.output<typeof marketCoinSchema>;
 
 export const marketsSchema = z.array(marketCoinSchema);
 
+/* ---- /coins/markets, as the heatmap needs it ------------------------------ */
+
+// The same endpoint, asked without sparklines (the heatmap draws none, and they are most of
+// the payload) and cut down to what a cell shows. Parsed by the markets schema so a
+// malformed coin is handled in one place; MarketCoin satisfies HeatCoin, so the home
+// preview can feed rows it already has.
+export type HeatCoin = Pick<
+  MarketCoin,
+  | "id"
+  | "symbol"
+  | "name"
+  | "image"
+  | "rank"
+  | "price"
+  | "marketCap"
+  | "volume24h"
+  | "change1h"
+  | "change24h"
+  | "change7d"
+>;
+
+export const heatmapSchema = marketsSchema.transform((coins): HeatCoin[] =>
+  coins.map((c) => ({
+    id: c.id,
+    symbol: c.symbol,
+    name: c.name,
+    image: c.image,
+    rank: c.rank,
+    price: c.price,
+    marketCap: c.marketCap,
+    volume24h: c.volume24h,
+    change1h: c.change1h,
+    change24h: c.change24h,
+    change7d: c.change7d,
+  })),
+);
+
 /* ---- /search/trending ---------------------------------------------------- */
 
 // Lenient on purpose: older versions of this endpoint returned display strings

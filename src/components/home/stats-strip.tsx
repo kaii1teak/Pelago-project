@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { CountUp, type CountUpFormat } from "@/components/motion/count-up";
 import { ErrorState } from "@/components/ui/error-state";
 import { LiveBadge } from "@/components/ui/live-badge";
+import { useLiveStatus } from "@/hooks/use-live";
 import { PercentChange } from "@/components/ui/percent-change";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGlobalStats, useMarkets } from "@/lib/api/hooks";
@@ -51,6 +52,7 @@ function StatCell({ label, value, format, pending, foot }: Stat) {
 export function StatsStrip() {
   const global = useGlobalStats();
   const markets = useMarkets();
+  const stream = useLiveStatus();
 
   const volume = useMemo(
     () => (markets.data ? sumVolume(markets.data) : null),
@@ -124,7 +126,7 @@ export function StatsStrip() {
         ))}
       </dl>
       <div className="line-fade-top px-4 py-3">
-        <LiveBadge status={refreshFailing ? "offline" : "live"} />
+        <LiveBadge status={refreshFailing ? "offline" : "live"} stream={stream} />
       </div>
     </section>
   );

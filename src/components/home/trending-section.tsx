@@ -2,13 +2,12 @@
 
 import { ArrowRight, Flame } from "lucide-react";
 import Link from "next/link";
+import { LiveChange, LivePrice } from "@/components/live/live-price";
 import { CoinLink } from "@/components/motion/coin-link";
 import { SharedCoin } from "@/components/motion/shared-coin";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { PercentChange } from "@/components/ui/percent-change";
-import { Price } from "@/components/ui/price";
 import { RowIndex } from "@/components/ui/row-index";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,11 +50,11 @@ function TrendingRow({ coin, index }: { coin: TrendingCoin; index: number }) {
         <span className="flex flex-col items-end gap-1 sm:contents">
           <span className="text-right">
             <SharedCoin id={coin.id} part="price">
-              <Price value={coin.price} className="text-mono-md text-primary" />
+              <LivePrice coin={coin} className="text-mono-md text-primary" />
             </SharedCoin>
           </span>
           <span className="flex justify-end">
-            <PercentChange value={coin.change24h} className="text-mono-sm" />
+            <LiveChange coin={coin} className="text-mono-sm" />
           </span>
         </span>
       </CoinLink>

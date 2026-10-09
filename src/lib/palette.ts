@@ -109,6 +109,7 @@ export const assetHref = (id: string) => `/coin/${encodeURIComponent(id)}`;
 const PAGE_HOTKEY: Record<string, HotkeyId> = {
   "/": "go.home",
   "/markets": "go.markets",
+  "/heatmap": "go.heatmap",
   "/watchlist": "go.watchlist",
   "/compare": "go.compare",
 };

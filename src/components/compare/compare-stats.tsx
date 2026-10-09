@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CoinLogo } from "@/components/ui/coin-logo";
+import { LivePrice } from "@/components/live/live-price";
 import { PercentChange } from "@/components/ui/percent-change";
 import { Price } from "@/components/ui/price";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +47,7 @@ const ROWS: readonly Row[] = [
   {
     id: "price",
     label: () => "Price",
-    cell: (a) => <Price value={a.coin.price} className={num} />,
+    cell: (a) => <LivePrice coin={a.coin} className={num} />,
   },
   {
     id: "change24h",

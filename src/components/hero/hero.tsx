@@ -1,4 +1,4 @@
-import {ArrowRight} from "lucide-react";
+
 import Link from "next/link";
 import {LineFan} from "@/components/decor/line-fan";
 import {StatsStrip} from "@/components/home/stats-strip";
@@ -25,11 +25,11 @@ export function Hero() {
                             The market, in motion.
                         </h1>
 
-                        <p className="mt-6 max-w-xl text-body-xl text-secondary">
+                        <p className="mt-5 max-w-xl text-body-xl text-secondary">
                             Live prices, clear charts and side-by-side comparisons for the assets that
                             matter, in one fast, focused dashboard.
                         </p>
-                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    <div className="mt-5 flex flex-wrap justify-center gap-3">
                         <Link href="/markets" className={buttonVariants({size: "lg"})}>
                             Explore markets
                             {/*<ArrowRight aria-hidden="true"/>*/}

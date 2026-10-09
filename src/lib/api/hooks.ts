@@ -17,6 +17,7 @@ import { mergeLineSeries } from "@/lib/chart-data";
 import type {
   CoinDetail,
   GlobalStats,
+  HeatCoin,
   MarketCoin,
   OhlcChart,
   PriceChart,
@@ -105,6 +106,27 @@ export function useSearch(query: string) {
     // Names and ranks barely move: no reason to ask again for the same text soon.
     staleTime: 5 * LIVE_REFETCH_MS,
     gcTime: 5 * 60_000,
+  });
+}
+
+/**
+ * The heatmap's coins: the top 200 of a category (or of the whole market), with every
+ * period's change. One request serves every universe, period and size, since those only
+ * choose what to draw from it. Changing category keeps the old picture on screen until the
+ * new one arrives (`isPlaceholderData` says which it is), so cells morph instead of blanking.
+ */
+export function useHeatmap(category: string | null) {
+  return useQuery<HeatCoin[], ApiError>({
+    queryKey: queryKeys.heatmap(category),
+    queryFn: ({ signal }) =>
+      apiGet<HeatCoin[]>(
+        category
+          ? `/api/heatmap?category=${encodeURIComponent(category)}`
+          : "/api/heatmap",
+        { signal },
+      ),
+    refetchInterval: LIVE_REFETCH_MS,
+    placeholderData: keepPreviousData,
   });
 }
 

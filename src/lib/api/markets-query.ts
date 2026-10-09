@@ -6,6 +6,8 @@
 export const PER_PAGE_OPTIONS = [10, 25, 50, 100, 250] as const;
 export const DEFAULT_PER_PAGE = 100;
 export const MAX_IDS = 50;
+/** The heatmap's single request: the biggest universe it can show. Smaller ones are slices of it. */
+export const HEATMAP_COUNT = 200;
 
 export type MarketsParams = {
   /** Specific coins (watchlist/compare). May include coins outside the top 100. */

@@ -4,6 +4,6 @@
     path { fill: #0a0a0a; }
     @media (prefers-color-scheme: dark) { path { fill: #f0f0f0; } }
   </style>
-  <path d="M2 2H22L2 22Z"/>
-  <path d="M22 7V22H7Z"/>
+  <path d="M2 2H20L2 20Z"/>
+  <path d="M22 4V22H4Z"/>
 </svg>

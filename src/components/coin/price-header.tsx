@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { LiveChange, LivePrice } from "@/components/live/live-price";
 import { SharedCoinTarget } from "@/components/motion/shared-coin";
 import { NAV_BACK } from "@/components/motion/view-transition";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { Badge } from "@/components/ui/badge";
-import { PercentChange } from "@/components/ui/percent-change";
-import { Price } from "@/components/ui/price";
 import { CompareLink } from "@/components/compare/compare-link";
 import { WatchButton } from "@/components/watchlist/watch-button";
 import type { CoinDetail } from "@/lib/api/schemas";
@@ -17,6 +16,12 @@ export function PriceHeader({ coin }: { coin: CoinDetail }) {
   // Remembered so that going back to a list morphs this header into the coin's row.
   const { id, name, symbol, image } = coin;
   const price = coin.market.price;
+  const source = {
+    symbol: coin.symbol,
+    rank: coin.rank,
+    price,
+    change24h: coin.market.change24h,
+  };
   useEffect(() => {
     setSubject({ id, name, symbol, image, price });
   }, [id, name, symbol, image, price]);
@@ -64,9 +69,9 @@ export function PriceHeader({ coin }: { coin: CoinDetail }) {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <SharedCoinTarget part="price">
-          <Price value={coin.market.price} className="text-heading-lg text-primary" />
+          <LivePrice coin={source} className="text-heading-lg text-primary" />
         </SharedCoinTarget>
-        <PercentChange value={coin.market.change24h} className="text-mono-md" />
+        <LiveChange coin={source} className="text-mono-md" />
         <span className="label-mono text-muted">24h</span>
       </div>
     </header>
