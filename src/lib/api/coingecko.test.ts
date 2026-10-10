@@ -98,7 +98,7 @@ describe("cgFetch: failures map to typed ApiErrors", () => {
     fetchMock.mockResolvedValueOnce(new Response("", { status: 429 }));
     await expect(call()).rejects.toMatchObject({
       code: "rate_limited",
-      retryAfter: 60``,
+      retryAfter: 60,
     });
   });
 
