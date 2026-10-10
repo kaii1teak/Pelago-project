@@ -68,6 +68,8 @@ export const navigationMock = {
     return useMemo(() => new URLSearchParams(search), [search]);
   },
   usePathname: () => window.location.pathname,
+  // What a root layout sees: the first segment of the URL, null on the home page.
+  useSelectedLayoutSegment: () => window.location.pathname.split("/")[1] || null,
   // Enough for /coin/[id]: the segment after /coin/.
   useParams: () => ({ id: window.location.pathname.split("/")[2] }),
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSelectedLayoutSegment } from "next/navigation";
 import { CoinLogo } from "@/components/ui/coin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMarkets } from "@/lib/api/hooks";
@@ -38,10 +38,16 @@ function Item({ coin }: { coin: MarketCoin }) {
  * Markets, with nothing to operate. Reduced motion: no animation, a plain scrollable row.
  */
 export function TickerTape() {
-  const pathname = usePathname();
+  // The home page is the route with no segment under the root layout. That is read from the
+  // route tree that is being rendered, NOT from the URL (usePathname): a prerendered page can
+  // be rendered on the server under another path than the browser's (on Vercel the home page's
+  // HTML came with this strip in it). A strip the server draws and the browser doesn't is never
+  // cleaned up (React leaves unknown children of <body> alone), so it stayed above the page
+  // and, after a client-side navigation, the real strip appeared under it.
+  const segment = useSelectedLayoutSegment();
   const { data, isPending } = useMarkets();
 
-  if (pathname === "/") return null;
+  if (segment === null) return null;
 
   const coins = data?.slice(0, COUNT) ?? [];
 
