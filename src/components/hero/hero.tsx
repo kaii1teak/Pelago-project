@@ -19,16 +19,27 @@ export function Hero() {
             <div className="page-container flex min-h-hero flex-col">
                 <div className="flex flex-1 flex-col items-center pt-hero pb-16 text-center">
                     <div className="relative top-7 flex flex-col items-center">
-                        <SectionLabel>Live crypto markets</SectionLabel>
+                        <div className="relative flex flex-col items-center">
+                            {/* Blurs the lines behind the text. It is its own layer between the lines
+                  (-z-10) and the text, not a background on a parent of the lines: a blur only
+                  affects what is BEHIND the element, and a filter on a parent would trap the
+                  lines inside it. Size: the insets. Strength: backdrop-blur-sm / md / lg / xl.
+                  Softness of the edge: where the mask goes from black to transparent. */}
+                            <div
+                                aria-hidden="true"
+                                className="pointer-events-none absolute -inset-x-12 -inset-y-10 -z-5 backdrop-blur-md [mask-image:radial-gradient(ellipse_closest-side,black_45%,transparent)]"
+                            />
+                            <SectionLabel>Live crypto markets</SectionLabel>
 
-                        <h1 className="mt-6 max-w-175 text-heading-2xl font-semibold text-primary">
-                            The market, in motion.
-                        </h1>
+                            <h1 className="mt-6 max-w-175 text-heading-2xl font-semibold text-primary">
+                                The market, in motion.
+                            </h1>
 
-                        <p className="mt-5 max-w-xl text-body-xl text-secondary">
-                            Live prices, clear charts and side-by-side comparisons for the assets that
-                            matter, in one fast, focused dashboard.
-                        </p>
+                            <p className="mt-5 max-w-xl text-body-xl text-secondary">
+                                Live prices, clear charts and side-by-side comparisons for the assets that
+                                matter, in one fast, focused dashboard.
+                            </p>
+                        </div>
                     <div className="mt-5 flex flex-wrap justify-center gap-3">
                         <Link href="/markets" className={buttonVariants({size: "lg"})}>
                             Explore markets
