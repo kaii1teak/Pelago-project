@@ -51,9 +51,7 @@ Press `?` anywhere to see them. Single-key shortcuts can be switched off there (
 | `c`, `a`                     | Asset chart: line or candles; compare                |
 
 Inside the heatmap the picture is one tab stop: arrow keys move to the nearest cell in that
-direction, `Home`/`End` jump to the first and last, `Enter` opens the asset. On the Russian and
-Ukrainian layouts the letter shortcuts work too (they are matched by key, falling back to the
-physical key).
+direction, `Home`/`End` jump to the first and last, `Enter` opens the asset. 
 
 ## Stack
 
@@ -85,13 +83,6 @@ CoinGecko's anonymous limits are strict and shared, so you will see rate-limit e
 
 The design system lives at `/styleguide`: every token, primitive and state in both themes.
 
-### Deploying to Vercel
-
-Import the repository on Vercel (the Next.js preset needs no configuration) and set
-`COINGECKO_API_KEY` for Production and Preview **before the first deploy**, so the pages that
-fetch data at build time get real data. Note that `next build` type-checks test files too: a type
-error in one fails the deploy. After deploying, open `/api/heatmap` (it should return JSON, not a 429) and check that the home page's HTML has no ticker strip:
-`curl -s URL | grep -c 'Live prices of the top assets'` is `0` for `/` and `1` for other pages.
 
 ## How data flows
 
@@ -166,7 +157,7 @@ page. The remaining cost is shared JavaScript (the React runtime and the motion 
 
 ## Testing
 
-`npm test` runs ~1,350 tests. They cover the pure logic (formatting, the live connection against a
+`npm test` runs more than 1000 tests. They cover the pure logic (formatting, the live connection against a
 fake socket and fake timers, the hotkey dispatcher, the treemap layout, URL state), the components
 (keyboard use, touch, live updates, cleanup of observers and listeners) and guards that read the
 source: no raw durations, no hex colours outside the tokens, the heatmap's label contrast, the
@@ -174,8 +165,6 @@ client bundle's import graph. Behaviour was also checked in real browsers: produ
 phone and desktop viewports, both themes, a contrast audit of every rendered label, keyboard-only
 walks through every page, and memory checks over repeated navigation.
 
-Not checked: Safari and Firefox (the animations of the heatmap cells use CSS transitions on SVG
-geometry, which would degrade to no animation), and real screen readers (only ARIA and focus order).
 
 ## Project structure
 
