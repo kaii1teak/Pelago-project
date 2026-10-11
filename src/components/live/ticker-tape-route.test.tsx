@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { queryKeys } from "@/lib/api/query-keys";
 import { makeCoin } from "@/test/fixtures";
 import { renderWithClient } from "@/test/render";
-import { TickerTape } from "./ticker-tape";
+import { TICKER_REQUEST, TickerTape } from "./ticker-tape";
 
 /**
  * The strip is for every page but the home page, and which page this is must come from the
@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({
 const coins = [makeCoin({ id: "bitcoin", name: "Bitcoin", symbol: "BTC", rank: 1 })];
 const seeded = () =>
   renderWithClient(<TickerTape />, (client) =>
-    client.setQueryData(queryKeys.markets(undefined), coins),
+    client.setQueryData(queryKeys.markets(TICKER_REQUEST), coins),
   );
 
 describe("TickerTape: which page it is on", () => {

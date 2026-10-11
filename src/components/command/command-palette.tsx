@@ -22,8 +22,7 @@ import { CoinLogo } from "@/components/ui/coin-logo";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useTheme } from "@/hooks/use-theme";
 import { useMarkets, useSearch } from "@/lib/api/hooks";
-import { normalizeSearchText } from "@/lib/api/parse-search";
-import { MAX_SEARCH_RESULTS } from "@/lib/api/schemas";
+import { MAX_SEARCH_RESULTS, normalizeSearchText } from "@/lib/api/parse-search";
 import {
   buildGroups,
   flattenGroups,

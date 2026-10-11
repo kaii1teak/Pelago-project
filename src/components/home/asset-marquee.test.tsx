@@ -1,6 +1,6 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { queryKeys } from "@/lib/api/query-keys";
 import { makeCoin } from "@/test/fixtures";
 import { mockApi, renderWithClient } from "@/test/render";
@@ -58,11 +58,106 @@ describe("AssetMarquee", () => {
     expect(document.body).toHaveFocus();
   });
 
+  it("sticks under the header once the page is scrolled to it, and sits above the content that passes under", () => {
+    renderWithClient(<AssetMarquee />, (c) =>
+      c.setQueryData(queryKeys.markets(), [makeCoin({ id: "bitcoin" })]),
+    );
+    const strip = screen.getByRole("region", { name: "Top assets" });
+    expect(strip).toHaveClass("sticky", "top-home-strip", "z-30", "bg-primary");
+  });
+
+  describe("while it is stuck", () => {
+    const rect = (top: number) =>
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+        top,
+        bottom: top + 56,
+        left: 0,
+        right: 0,
+        width: 0,
+        height: 56,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      });
+    const mountStrip = () => {
+      renderWithClient(<AssetMarquee />, (c) =>
+        c.setQueryData(queryKeys.markets(), [makeCoin({ id: "bitcoin" })]),
+      );
+      const strip = screen.getByRole("region", { name: "Top assets" });
+      // Where it sticks. (jsdom has no stylesheet: it would come from top-home-strip.)
+      strip.style.top = "44px";
+      return strip;
+    };
+    // Animation frames wait until the test lets them run, as in a browser (the strip looks at
+    // most once per frame, however many scroll events come).
+    let frames: FrameRequestCallback[] = [];
+    const scrollTo = () => {
+      act(() => {
+        window.dispatchEvent(new Event("scroll"));
+        const due = frames;
+        frames = [];
+        for (const frame of due) frame(0);
+      });
+    };
+
+    beforeEach(() => {
+      frames = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+        frames.push(callback);
+        return frames.length;
+      });
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it("is marked stuck once its top reaches where it sticks, and unmarked when it leaves", () => {
+      rect(500);
+      const strip = mountStrip();
+      expect(strip).not.toHaveAttribute("data-stuck");
+
+      rect(44);
+      scrollTo();
+      expect(strip).toHaveAttribute("data-stuck", "true");
+
+      rect(300);
+      scrollTo();
+      expect(strip).not.toHaveAttribute("data-stuck");
+    });
+
+    it("shrinks its items to the size of the strip on the other pages only then", () => {
+      rect(500);
+      const strip = mountStrip();
+      const link = within(strip).getAllByRole("link", { hidden: true })[0]!;
+      // Resting size, and the stuck size that applies when the strip is marked.
+      expect(link).toHaveClass("h-[calc(var(--strip-home-h)-2px)]");
+      expect(link).toHaveClass(
+        "group-data-[stuck=true]/strip:h-[calc(var(--strip-stuck-h)-1px)]",
+      );
+      expect(link).toHaveClass("group-data-[stuck=true]/strip:px-4");
+      expect(strip).toHaveClass("group/strip");
+    });
+
+    it("stops listening when the page goes", () => {
+      rect(500);
+      const remove = vi.spyOn(window, "removeEventListener");
+      renderWithClient(<AssetMarquee />, (c) =>
+        c.setQueryData(queryKeys.markets(), [makeCoin({ id: "bitcoin" })]),
+      ).unmount();
+      const types = remove.mock.calls.map(([type]) => type);
+      expect(types).toContain("scroll");
+      expect(types).toContain("resize");
+    });
+  });
+
   it("holds its height with a placeholder while loading", () => {
     mockApi({ "/api/markets": "pending" });
     const { container } = renderWithClient(<AssetMarquee />);
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
-    expect(container.firstElementChild).toHaveClass("h-14");
+    // The same box as the strip itself (sticky, same height), so nothing moves when it fills.
+    expect(container.firstElementChild).toHaveClass(
+      "sticky",
+      "top-home-strip",
+      "h-[var(--strip-home-h)]",
+    );
   });
 
   it("renders nothing on failure: the stats strip owns the error UI", async () => {

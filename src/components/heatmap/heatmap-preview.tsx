@@ -1,13 +1,21 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ErrorState } from "@/components/ui/error-state";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { useMarkets } from "@/lib/api/hooks";
 import { HeatmapLegend } from "./heatmap-legend";
 import { HeatmapSkeleton } from "./heatmap-skeleton";
-import { Treemap } from "./treemap";
+
+// Below the fold on every screen, and a picture that needs the browser's own measurements to
+// be drawn: its code (the treemap, d3) is fetched after the page, with the same frame held in
+// its place meanwhile, so it costs the first load nothing.
+const Treemap = dynamic(() => import("./treemap").then((module) => module.Treemap), {
+  ssr: false,
+  loading: () => <HeatmapSkeleton density="compact" />,
+});
 
 /** A small picture of the market is a small number of cells. */
 const PREVIEW_COUNT = 30;

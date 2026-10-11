@@ -19,6 +19,19 @@ export function downsample(values: readonly number[], target: number): number[] 
   return out;
 }
 
+/**
+ * Rounds every value to `digits` significant digits. A sparkline is a hundred pixels wide:
+ * the thirteen digits an exchange price arrives with are invisible there, but with a hundred
+ * rows of them they were a third of the home page's HTML and of every refresh of the list.
+ * Significant digits, not decimals, so a price of $0.00001234 keeps its shape as well as
+ * a price of $83,000 does.
+ */
+export function roundSignificant(values: readonly number[], digits = 6): number[] {
+  return values.map((value) =>
+    Number.isFinite(value) ? Number(value.toPrecision(digits)) : value,
+  );
+}
+
 export type SparklinePath = {
   /** SVG path for the line. */
   line: string;

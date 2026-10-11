@@ -198,10 +198,11 @@ describe("single keys", () => {
 });
 
 describe("the shortcuts overlay", () => {
-  it("opens with ? and lists every shortcut, grouped", () => {
+  it("opens with ? and lists every shortcut, grouped", async () => {
     setup();
     press("?", { shiftKey: true });
-    const dialog = screen.getByRole("dialog", { name: "Keyboard shortcuts" });
+    // The overlay's code is loaded when it is first asked for, so it arrives a moment later.
+    const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
     for (const group of GROUPS) {
       expect(
         within(dialog).getByRole("heading", { name: GROUP_LABEL[group] }),
@@ -212,28 +213,30 @@ describe("the shortcuts overlay", () => {
     }
   });
 
-  it("shows a sequence as separate keys read as 'then'", () => {
+  it("shows a sequence as separate keys read as 'then'", async () => {
     setup();
     press("?", { shiftKey: true });
-    const row = screen.getByText("Go to Markets").closest("li")!;
+    const row = (await screen.findByText("Go to Markets")).closest("li")!;
     expect(within(row).getAllByText(/^[GM]$/)).toHaveLength(2);
     expect(row).toHaveTextContent(/G\s*then\s*M/);
   });
 
-  it("says Ctrl on Windows and Linux, and ⌘ on a Mac", () => {
+  it("says Ctrl on Windows and Linux, and ⌘ on a Mac", async () => {
     vi.spyOn(navigator, "platform", "get").mockReturnValue("Win32");
     const first = setup();
     press("?", { shiftKey: true });
-    const open = () => screen.getByText("Search assets and pages").closest("li")!;
-    expect(open()).toHaveTextContent("Ctrl");
+    const open = async () =>
+      (await screen.findByText("Search assets and pages")).closest("li")!;
+    expect(await open()).toHaveTextContent("Ctrl");
     first.unmount();
 
     vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
     act(() => useHotkeysStore.setState({ overlayOpen: false }));
     setup();
     press("?", { shiftKey: true });
-    expect(open()).toHaveTextContent("⌘");
-    expect(open()).not.toHaveTextContent("Ctrl");
+    const row = await open();
+    expect(row).toHaveTextContent("⌘");
+    expect(row).not.toHaveTextContent("Ctrl");
   });
 
   it("closes with Escape and hands focus back to what had it", async () => {
@@ -242,7 +245,7 @@ describe("the shortcuts overlay", () => {
     const button = screen.getByRole("button", { name: "earlier focus" });
     button.focus();
     press("?", { shiftKey: true }, button);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(button).toHaveFocus();

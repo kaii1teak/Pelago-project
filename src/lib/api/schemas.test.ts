@@ -63,6 +63,16 @@ describe("marketsSchema", () => {
     expect(bitcoin).not.toHaveProperty("roi");
   });
 
+  it("rounds the sparkline to six significant digits: the thirteen an exchange sends are invisible at that size", () => {
+    for (const value of bitcoin!.sparkline) {
+      expect(
+        String(value)
+          .replace(/^0\.0*|\./g, "")
+          .replace(/0+$/, "").length,
+      ).toBeLessThanOrEqual(6);
+    }
+  });
+
   it("downsamples the 7-day sparkline to keep the payload small", () => {
     expect(bitcoin!.sparkline).toHaveLength(42);
     // Hourly input rose linearly, so the reduced series must still rise.

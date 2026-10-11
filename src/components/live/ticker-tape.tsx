@@ -10,6 +10,12 @@ import { LiveStatus } from "./live-status";
 import { LiveChange, LivePrice } from "./live-price";
 
 const COUNT = 20;
+/**
+ * The strip needs 20 assets, not the 100 (with their sparklines) of the full list that the
+ * Markets page and the home page already hold: a request for just enough, so the pages that
+ * don't hold the list don't download all of it for a strip.
+ */
+export const TICKER_REQUEST = { perPage: 25 } as const;
 /** The strip's height is reserved from the first paint, so the page never shifts when it fills. */
 const HEIGHT = "h-9";
 
@@ -45,16 +51,19 @@ export function TickerTape() {
   // cleaned up (React leaves unknown children of <body> alone), so it stayed above the page
   // and, after a client-side navigation, the real strip appeared under it.
   const segment = useSelectedLayoutSegment();
-  const { data, isPending } = useMarkets();
+  // The strip is a component of its own so that its data is only asked for where it is shown:
+  // on the home page, which has no strip here, nothing is fetched.
+  return segment === null ? null : <Strip />;
+}
 
-  if (segment === null) return null;
-
+function Strip() {
+  const { data, isPending } = useMarkets(TICKER_REQUEST);
   const coins = data?.slice(0, COUNT) ?? [];
 
   return (
     <section
       aria-label="Live prices of the top assets"
-      className={`flex ${HEIGHT} border-b border-primary`}
+      className={`flex ${HEIGHT} sticky top-header z-30 border-b border-primary bg-primary`}
     >
       <div className="flex shrink-0 items-center border-r border-primary px-4">
         <LiveStatus />

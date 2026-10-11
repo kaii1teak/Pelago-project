@@ -193,8 +193,8 @@ export function MarketsExplorer() {
         offline={offline}
       />
 
-      {/* scroll-mt clears the sticky header when paging scrolls here */}
-      <div ref={tableTop} className="scroll-mt-24 space-y-4">
+      {/* scroll-mt clears the sticky header and the strip of prices when paging scrolls here */}
+      <div ref={tableTop} className="scroll-mt-32 space-y-4">
         <div className="border-t border-primary">{body}</div>
 
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">

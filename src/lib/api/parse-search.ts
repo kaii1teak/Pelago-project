@@ -2,6 +2,11 @@ import { ApiError } from "./errors";
 
 export const MIN_QUERY_LENGTH = 2;
 export const MAX_QUERY_LENGTH = 40;
+/**
+ * How many matches the palette ever shows. Here, not next to the search schema: the palette
+ * (in every page's JavaScript) reads it, and the schema's module drags in all of zod.
+ */
+export const MAX_SEARCH_RESULTS = 8;
 
 /** Letters, digits, spaces and the few separators coin names use. */
 const ALLOWED = /^[\p{L}\p{N} ._-]+$/u;

@@ -2,6 +2,8 @@ import { QueryClient, isServer } from "@tanstack/react-query";
 import { isApiError } from "./errors";
 
 const MAX_RETRIES = 2;
+/** How long fetched data counts as fresh: no refetch on mount or on a new observer within it. */
+export const STALE_TIME_MS = 2 * 60_000;
 /** Longest we'll keep a skeleton on screen waiting out a rate limit. */
 const MAX_SILENT_WAIT_MS = 5_000;
 
@@ -27,8 +29,12 @@ export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Matches the server cache windows: refetching sooner can't return newer data.
-        staleTime: 60_000,
+        // The server's own cache windows are 1 to 5 minutes, so asking again sooner can't
+        // return newer data. And a page that arrives with its data already in it (the HTML
+        // is up to a minute or two old) must not ask for it all again the moment it loads:
+        // that was a refetch of the whole markets list (70 KB) on every visit. The lists
+        // still refresh every minute on their own timer, and live prices come by socket.
+        staleTime: STALE_TIME_MS,
         gcTime: 10 * 60_000,
         retry: shouldRetry,
         retryDelay,

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { GlobalHotkeys } from "@/components/shortcuts/global-hotkeys";
 import { PendingHint } from "@/components/shortcuts/pending-hint";
-import { ShortcutsOverlay } from "@/components/shortcuts/shortcuts-overlay";
+import { ShortcutsOverlayLoader } from "@/components/shortcuts/shortcuts-overlay-loader";
 import { dispatcher } from "@/hooks/use-hotkey";
 
 /**
@@ -29,7 +29,7 @@ export function HotkeysProvider() {
   return (
     <>
       <GlobalHotkeys />
-      <ShortcutsOverlay />
+      <ShortcutsOverlayLoader />
       <PendingHint />
     </>
   );

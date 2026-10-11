@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { MAX_SEARCH_RESULTS } from "./parse-search";
 import { toCandleSeries, toLineSeries } from "@/lib/chart-data";
 import { htmlToParagraphs } from "@/lib/sanitize";
-import { downsample } from "@/lib/series";
+import { downsample, roundSignificant } from "@/lib/series";
 import { safeUrl } from "@/lib/url";
 
 /**
@@ -88,7 +89,9 @@ export const marketCoinSchema = z
     change24h:
       raw.price_change_percentage_24h_in_currency ?? raw.price_change_percentage_24h,
     change7d: raw.price_change_percentage_7d_in_currency,
-    sparkline: downsample(raw.sparkline_in_7d?.price ?? [], SPARKLINE_POINTS),
+    sparkline: roundSignificant(
+      downsample(raw.sparkline_in_7d?.price ?? [], SPARKLINE_POINTS),
+    ),
   }));
 export type MarketCoin = z.output<typeof marketCoinSchema>;
 
@@ -179,8 +182,8 @@ export type TrendingCoin = z.output<typeof trendingSchema>[number];
 
 /* ---- /search -------------------------------------------------------------- */
 
-/** How many matches the palette ever shows. */
-export const MAX_SEARCH_RESULTS = 8;
+// Defined in parse-search.ts, which the browser can import without zod; re-exported here.
+export { MAX_SEARCH_RESULTS };
 
 /**
  * Only `coins` is read (the response also lists exchanges, categories, NFTs...).

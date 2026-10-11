@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveBadge } from "@/components/ui/live-badge";
@@ -8,10 +8,10 @@ import type { LiveStatus as Status } from "@/lib/live/types";
 import { LiveProvider } from "@/providers/live-provider";
 import { makeCoin } from "@/test/fixtures";
 import { installHistoryMock, uninstallHistoryMock } from "@/test/navigation";
-import { renderWithClient } from "@/test/render";
+import { mockApi, renderWithClient } from "@/test/render";
 import { LiveChange, LivePrice } from "./live-price";
 import { LiveStatus, STATUS_TEXT } from "./live-status";
-import { TickerTape } from "./ticker-tape";
+import { TICKER_REQUEST, TickerTape } from "./ticker-tape";
 
 vi.mock(
   "next/navigation",
@@ -172,12 +172,28 @@ describe("TickerTape", () => {
   );
   const seeded = () =>
     renderWithClient(<TickerTape />, (client) =>
-      client.setQueryData(queryKeys.markets(undefined), coins),
+      client.setQueryData(queryKeys.markets(TICKER_REQUEST), coins),
     );
   const at = (path: string) => window.history.replaceState(null, "", path);
 
   beforeEach(() => installHistoryMock());
   afterEach(() => uninstallHistoryMock());
+
+  it("asks for 25 assets, not the whole list: the pages that don't hold the list shouldn't download it for a strip", async () => {
+    at("/markets");
+    const fetchMock = mockApi({ "/api/markets": [] });
+    renderWithClient(<TickerTape />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(String(fetchMock.mock.calls[0]![0])).toBe("/api/markets?per_page=25");
+  });
+
+  it("fetches nothing on the home page, where it is not shown", async () => {
+    at("/");
+    const fetchMock = mockApi({ "/api/markets": [] });
+    renderWithClient(<TickerTape />);
+    await act(async () => {});
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
   it("is not shown on the home page, which has its own strip", () => {
     at("/");

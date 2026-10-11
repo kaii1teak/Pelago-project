@@ -48,3 +48,17 @@ describe("retryDelay", () => {
     expect(retryDelay(10, error)).toBeLessThan(8300);
   });
 });
+
+describe("makeQueryClient: how long data counts as fresh", () => {
+  it("is two minutes, so a page that arrives with its data does not fetch it all again at once", async () => {
+    const { makeQueryClient, STALE_TIME_MS } = await import("./query-client");
+    expect(STALE_TIME_MS).toBe(120_000);
+    expect(makeQueryClient().getDefaultOptions().queries?.staleTime).toBe(STALE_TIME_MS);
+  });
+
+  it("is not longer than the server's own cache of the slowest-changing list it serves", async () => {
+    // Fresh for longer than the server caches a thing would just be showing older numbers.
+    const { STALE_TIME_MS } = await import("./query-client");
+    expect(STALE_TIME_MS).toBeLessThanOrEqual(5 * 60_000);
+  });
+});

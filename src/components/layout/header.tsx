@@ -22,7 +22,14 @@ export function Header() {
     >
       <div className="page-container flex h-full items-center justify-between gap-6">
         <div className="flex items-center gap-8">
-          <Link href="/" aria-label="Pelago home" className="rounded-control">
+          <Link
+            href="/"
+            aria-label="Pelago home"
+            className="rounded-control"
+            // On the home page this link points at the page itself: prefetching it would
+            // download the whole page again (50 KB), for nothing.
+            prefetch={pathname === "/" ? false : undefined}
+          >
             <Wordmark />
           </Link>
 

@@ -61,7 +61,7 @@ export const CoinRow = memo(function CoinRow({
         delay: enters ? Math.min(index, ENTER_STAGGER_ROWS) * ENTER_STAGGER_S : 0,
         layout: { duration: DURATION.slow, ease: EASE_STANDARD },
       }}
-      className={`${ROW_HEIGHT} scroll-mt-20 scroll-mb-6 border-b border-primary transition-colors duration-fast ease-standard last:border-b-0 hover:bg-overlay-hover focus-visible:bg-overlay-hover focus-visible:-outline-offset-2`}
+      className={`${ROW_HEIGHT} scroll-mt-28 scroll-mb-6 border-b border-primary transition-colors duration-fast ease-standard last:border-b-0 hover:bg-overlay-hover focus-visible:bg-overlay-hover focus-visible:-outline-offset-2`}
     >
       <td className="w-12 pr-0 pl-2">
         <WatchButton id={coin.id} name={coin.name} />

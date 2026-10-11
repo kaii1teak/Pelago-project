@@ -114,6 +114,45 @@ describe("LiveConnection: opening and closing with demand", () => {
     expect(FakeSocket.all).toHaveLength(1); // and does not come back
   });
 
+  it("keeps the socket through the gap between two pages, and closes it once nobody comes back", () => {
+    const { store, connection } = setup({ idleCloseMs: 5000 });
+    watch(store, "BTCUSDT");
+    connection.setWanted(true);
+    last().open();
+    const socket = last();
+
+    // A page change: the old page's prices go, the next page's arrive a moment later.
+    connection.setWanted(false);
+    expect(socket.closed).toBe(false);
+    vi.advanceTimersByTime(300);
+    connection.setWanted(true);
+    // (Long past the wait: the pending close was cancelled, not just postponed.)
+    vi.advanceTimersByTime(4000);
+    socket.tickers(["BTCUSDT", "81000"]);
+    vi.advanceTimersByTime(4000);
+    expect(socket.closed).toBe(false);
+    expect(FakeSocket.all).toHaveLength(1); // the same socket, never reopened
+
+    // Nobody comes back: it closes after the wait, and stays closed.
+    connection.setWanted(false);
+    socket.tickers(["BTCUSDT", "81001"]);
+    vi.advanceTimersByTime(4999);
+    expect(socket.closed).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(socket.closed).toBe(true);
+    expect(store.getStatus()).toBe("idle");
+    vi.advanceTimersByTime(120_000);
+    expect(FakeSocket.all).toHaveLength(1);
+  });
+
+  it("does not wait to close by default", () => {
+    const { connection } = setup();
+    connection.setWanted(true);
+    const socket = last();
+    connection.setWanted(false);
+    expect(socket.closed).toBe(true);
+  });
+
   it("forgets the old prices when it closes (they'd be stale on return)", () => {
     const { store, connection } = setup();
     watch(store, "BTCUSDT");

@@ -19,6 +19,8 @@ export const liveConnection = new LiveConnection({
   store: liveStore,
   urls: LIVE_URLS,
   createSocket: (url) => new WebSocket(url) as unknown as SocketLike,
+  // Going from one page to the next briefly shows no prices at all: don't close for that.
+  idleCloseMs: 5000,
 });
 
 // The socket is open exactly while something on screen shows a live price.

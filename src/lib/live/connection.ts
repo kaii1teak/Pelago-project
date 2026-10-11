@@ -27,6 +27,12 @@ export type ConnectionOptions = {
   pollingRetryMs?: number;
   /** A connection that lasted this long was a good one: its failure does not grow the backoff. */
   stableMs?: number;
+  /**
+   * How long the socket is kept once nothing wants prices. A page change takes one page's
+   * prices off the screen a moment before the next page's arrive; without this the socket was
+   * closed and opened again on every navigation. 0 closes at once.
+   */
+  idleCloseMs?: number;
 };
 
 const DEFAULTS = {
@@ -38,6 +44,7 @@ const DEFAULTS = {
   failuresBeforePolling: 3,
   pollingRetryMs: 60_000,
   stableMs: 5000,
+  idleCloseMs: 0,
 } as const;
 
 /**
@@ -69,6 +76,7 @@ export class LiveConnection {
   private staleTimer: ReturnType<typeof setInterval> | undefined;
   private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
+  private idleTimer: ReturnType<typeof setTimeout> | undefined;
   private lastFlushAt = Number.NEGATIVE_INFINITY;
   private ticks = new Map<string, Tick>();
   private klines = new Map<string, Kline>();
@@ -92,6 +100,21 @@ export class LiveConnection {
 
   /** Something wants live prices (true) or nothing does any more (false). */
   setWanted(wanted: boolean) {
+    if (wanted) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = undefined;
+    } else if (this.wanted && this.o.idleCloseMs > 0) {
+      // Nothing wants prices right now; wait out the gap between two pages before closing.
+      this.idleTimer ??= setTimeout(() => {
+        this.idleTimer = undefined;
+        this.applyWanted(false);
+      }, this.o.idleCloseMs);
+      return;
+    }
+    this.applyWanted(wanted);
+  }
+
+  private applyWanted(wanted: boolean) {
     if (wanted === this.wanted) return;
     this.wanted = wanted;
     if (wanted) this.attempt = this.failures = 0;

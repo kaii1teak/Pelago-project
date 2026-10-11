@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Krub, Roboto_Mono } from "next/font/google";
-import { CommandPalette } from "@/components/command/command-palette";
+import { CommandPaletteLoader } from "@/components/command/command-palette-loader";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -86,7 +86,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <QueryProvider>
             <TooltipProvider>
               <StoreHydrator />
-              <CommandPalette />
+              <CommandPaletteLoader />
               <HotkeysProvider />
               <LiveProvider />
               <Header />

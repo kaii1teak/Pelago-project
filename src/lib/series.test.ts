@@ -1,5 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { buildSparklinePath, downsample } from "./series";
+import { buildSparklinePath, downsample, roundSignificant } from "./series";
+
+describe("roundSignificant", () => {
+  it("keeps six significant digits, whatever the size of the number", () => {
+    expect(
+      roundSignificant([83064.28345722, 0.0000123456789, 1.00013872, 123456789]),
+    ).toEqual([83064.3, 0.0000123457, 1.00014, 123457000]);
+  });
+
+  it("leaves a series that is already short exactly as it is", () => {
+    expect(roundSignificant([1, 2.5, 0])).toEqual([1, 2.5, 0]);
+  });
+
+  it("does not turn a missing number into a number", () => {
+    const out = roundSignificant([1, Number.NaN, Number.POSITIVE_INFINITY]);
+    expect(Number.isNaN(out[1])).toBe(true);
+    expect(out[2]).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("keeps the shape of a flat series, a stablecoin's sparkline, visible", () => {
+    const flat = [0.99987, 1.0001, 0.99991, 1.00013, 0.99995];
+    const rounded = roundSignificant(flat);
+    expect(rounded.indexOf(Math.max(...rounded))).toBe(flat.indexOf(Math.max(...flat)));
+    expect(rounded.indexOf(Math.min(...rounded))).toBe(flat.indexOf(Math.min(...flat)));
+    expect(new Set(rounded).size).toBe(flat.length);
+  });
+
+  it("makes a market list's payload much smaller", () => {
+    const raw = Array.from(
+      { length: 42 },
+      (_, i) => 83000 + Math.sin(i) * 1234.5678912345,
+    );
+    const before = JSON.stringify(raw).length;
+    const after = JSON.stringify(roundSignificant(raw)).length;
+    expect(after).toBeLessThan(before * 0.6);
+  });
+});
 
 describe("downsample", () => {
   it("returns a copy unchanged when already short enough", () => {

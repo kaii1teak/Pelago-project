@@ -234,6 +234,16 @@
   /* Asset price chart height. */
   --chart-h: 20rem;
 
+  /* The home page's strip of prices sticks under the header once the page is scrolled to it.
+     --strip-home-h is its height where it sits (lower on phones); --strip-stuck-h is how tall
+     it looks while it sticks: the strip of the other pages (TickerTape, h-9), so keep the two
+     in step. Its box keeps its height, so the page never shifts: it sticks higher by the
+     difference, the top part hidden under the header. --stuck-h is everything that shows
+     pinned at the top then. */
+  --strip-home-h: 2.5rem;
+  --strip-stuck-h: 2.25rem;
+  --stuck-h: calc(var(--header-h) + var(--strip-stuck-h));
+
   /* Heatmap fills: how far a price moved, as the success / critical color mixed into the page
      color, three steps each way (the thresholds are in lib/heatmap.ts). They are built from
      the theme's own colors, so one set serves both themes. The strongest step is as strong as
@@ -266,6 +276,7 @@
     --lh-lg: 2.5rem;
     --ls-lg: -0.0625rem;
     --chart-h: 28rem;
+    --strip-home-h: 3.5rem;
   }
 }
 
@@ -925,6 +936,15 @@ html[data-vt="theme-blend"] *::after {
 @utility top-header {
   top: var(--header-h);
 }
+/* Where the home page's strip of prices sticks: its box ends where the strip of the other
+   pages would end, so it is higher by the difference, and the top part is under the header. */
+@utility top-home-strip {
+  top: calc(var(--header-h) + var(--strip-stuck-h) - var(--strip-home-h));
+}
+/* Under everything the home page pins at the top: the header and its strip of prices. */
+@utility top-stuck {
+  top: var(--stuck-h);
+}
 
 /* Numbers and prices: Roboto Mono with fixed-width digits so columns don't jitter. */
 @utility num {
@@ -1058,12 +1078,13 @@ html[data-vt="theme-blend"] *::after {
 @utility h-chart {
   height: var(--chart-h);
 }
-/* A panel exactly as tall as the viewport below the sticky header. */
+/* A panel exactly as tall as the viewport below what is pinned at the top (the header and
+   the home page's strip of prices). */
 @utility h-panel {
-  height: calc(100svh - var(--header-h));
+  height: calc(100svh - var(--stuck-h));
 }
 /* Scroll track for the pinned features list: one panel plus 45svh of scroll
    per step after the first. Set --steps (the number of transitions) inline. */
 @utility feature-track {
-  height: calc(100svh - var(--header-h) + var(--steps, 3) * 45svh);
+  height: calc(100svh - var(--stuck-h) + var(--steps, 3) * 45svh);
 }

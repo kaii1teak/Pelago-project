@@ -83,7 +83,7 @@ export function FeaturesSection() {
     >
       {/* The panel centers one row; the row is exactly as tall as the list, so the left box
           (same top and bottom rules as the list's first and last) is the same height as it. */}
-      <div className="page-container lg:sticky lg:top-header lg:flex lg:h-panel lg:items-center">
+      <div className="page-container lg:sticky lg:top-stuck lg:flex lg:h-panel lg:items-center">
         <div className="lg:grid lg:w-full lg:grid-cols-[5fr_7fr]">
           {/* lg:pb-0: the mobile gap under the heading would push the text off-center here.
             The text block is centered in this box; lg:max-w-md is its width (narrower = more air). */}

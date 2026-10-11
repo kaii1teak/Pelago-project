@@ -33,17 +33,18 @@ const market = Array.from({ length: 50 }, (_, i) =>
 );
 
 describe("HeatmapPreview", () => {
-  it("draws the biggest thirty assets from the markets list the page already has", () => {
+  it("draws the biggest thirty assets from the markets list the page already has", async () => {
     const fetchMock = mockApi({});
     renderWithClient(<HeatmapPreview />, (client) =>
       client.setQueryData(queryKeys.markets(), market),
     );
-    expect(screen.getAllByRole("link", { name: /^Coin-\d+ \(/ })).toHaveLength(30);
+    // The picture's code is fetched after the page, so it arrives a moment later.
+    expect(await screen.findAllByRole("link", { name: /^Coin-\d+ \(/ })).toHaveLength(30);
     // It asked for nothing of its own.
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("is colored by the day's change, and says so", () => {
+  it("is colored by the day's change, and says so", async () => {
     renderWithClient(<HeatmapPreview />, (client) =>
       client.setQueryData(queryKeys.markets(), market),
     );

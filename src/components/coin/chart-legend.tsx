@@ -1,3 +1,4 @@
+import { useViewerTime } from "@/hooks/use-viewer-time";
 import { formatUsd } from "@/lib/format";
 import type { ChartMode, ChartRange } from "@/lib/chart";
 import { formatChartTime } from "./chart-format";
@@ -26,13 +27,14 @@ export function ChartLegend({
   mode: ChartMode;
   range: ChartRange;
 }) {
+  const viewer = useViewerTime();
   if (!info) return null;
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute top-3 left-3 z-10 flex flex-col gap-1 border border-primary bg-primary px-3 py-2 num text-mono-sm"
     >
-      <span className="text-muted">{formatChartTime(range, info.time)}</span>
+      <span className="text-muted">{formatChartTime(range, info.time, viewer)}</span>
       {mode === "line" ? (
         <span className="text-mono-md text-primary">{formatUsd(info.value)}</span>
       ) : (
