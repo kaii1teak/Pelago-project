@@ -7,6 +7,7 @@ import {
   CornerDownLeft,
   GitCompareArrows,
   House,
+  LayoutGrid,
   LoaderCircle,
   Keyboard,
   Moon,
@@ -46,6 +47,7 @@ const PAGES = pageItems(NAV_LINKS);
 const PAGE_ICON: Record<string, LucideIcon> = {
   "/": House,
   "/markets": TrendingUp,
+  "/heatmap": LayoutGrid,
   "/watchlist": Star,
   "/compare": GitCompareArrows,
 };
