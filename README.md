@@ -7,6 +7,14 @@ route handlers.
 
 **Live:** https://pelago-project.vercel.app
 
+![Pelago home page](docs/screenshots/home.png)
+
+|                                                                         |                                                                     |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| ![Heatmap, dark theme, 7-day change](docs/screenshots/heatmap-dark.png) | ![Asset page with candlesticks](docs/screenshots/asset-candles.png) |
+
+<p align="center"><img src="docs/screenshots/phones.png" alt="Pelago on a phone: home page and heatmap" width="520"></p>
+
 ## Features
 
 - **Live prices.** One WebSocket to Binance for the whole app. A price flashes green or red when it
