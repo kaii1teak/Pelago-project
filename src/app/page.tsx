@@ -10,6 +10,7 @@ import {Reveal} from "@/components/motion/reveal";
 import {getGlobalStats, getMarkets, getTrending} from "@/lib/api/endpoints";
 import {getQueryClient} from "@/lib/api/query-client";
 import {queryKeys} from "@/lib/api/query-keys";
+import {Analytics} from "@vercel/analytics/next";
 
 // The page itself is rebuilt at most once a minute; the data inside is cached
 // per endpoint (see REVALIDATE), so visitors share one upstream call.
