@@ -12,6 +12,7 @@ import { LiveProvider } from "@/providers/live-provider";
 import { MotionProvider } from "@/providers/motion-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { StoreHydrator } from "@/providers/store-hydrator";
+import { Analytics} from "@vercel/analytics/next";
 import "./globals.css";
 
 // Inter for headings, Krub for text, Roboto Mono for figures and labels. Which one
